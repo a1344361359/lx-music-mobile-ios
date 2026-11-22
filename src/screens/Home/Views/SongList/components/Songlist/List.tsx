@@ -119,7 +119,7 @@ export default forwardRef<ListType, ListProps>(({ onRefresh, onLoadMore, onOpenD
       const num = 2
       return {
         num,
-        width: Math.floor((windowSize.width - 40) / num),
+        width: Math.floor((windowSize.width - 60) / num),
       }
     }
     let w = width - GAP

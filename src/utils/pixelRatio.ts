@@ -5,12 +5,15 @@
  * width:375
  * height:667
  */
-import { PixelRatio } from 'react-native'
+import { PixelRatio, Platform } from 'react-native'
 import { windowSizeTools } from './windowSizeTools'
 
 // 高保真的宽度和高度
 const designWidth = 375.0
 const designHeight = 667.0
+
+// iOS 使用系统标准密度，避免历史 120% 字号把整个界面撑大
+const getAppFontScale = () => Platform.OS === 'ios' ? Math.min(global.lx.fontSize, 1) : global.lx.fontSize
 
 // 获取屏幕的dp
 const size = windowSizeTools.getSize()
@@ -51,7 +54,7 @@ export function getTextSize(size: number) {
   return size
 }
 export function setSpText(size: number) {
-  return getTextSize(size) * global.lx.fontSize
+  return getTextSize(size) * getAppFontScale()
 }
 
 /**
@@ -64,7 +67,7 @@ export function scaleSizeH(size: number) {
   // let scaleHeight = size * Math.min(screenPxH / designHeight, 3.1)
   let scaleHeight = size * scale
   size = Math.floor(scaleHeight / pixelRatio)
-  return size * global.lx.fontSize
+  return size * getAppFontScale()
 }
 
 /**
@@ -77,7 +80,7 @@ export function scaleSizeW(size: number) {
   // let scaleWidth = size * Math.min(screenPxW / designWidth, 3.1)
   let scaleWidth = size * scale
   size = Math.floor(scaleWidth / pixelRatio)
-  return size * global.lx.fontSize
+  return size * getAppFontScale()
 }
 
 

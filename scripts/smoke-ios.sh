@@ -6,26 +6,30 @@ if [ -z "$runtime" ]; then
   echo 'iOS 18.2 simulator runtime is required for the Xcode 16.2 smoke test.' >&2
   exit 1
 fi
-device=$(xcrun simctl create 'LX Music CI' com.apple.CoreSimulator.SimDeviceType.iPhone-16 "$runtime")
+device=''
 http_pid=''
 cleanup() {
   if [ -n "$http_pid" ]; then kill "$http_pid" 2>/dev/null || true; fi
-  xcrun simctl shutdown "$device" >/dev/null 2>&1 || true
+  if [ -n "$device" ]; then xcrun simctl shutdown "$device" >/dev/null 2>&1 || true; fi
 }
 trap cleanup EXIT
-xcrun simctl boot "$device"
-xcrun simctl bootstatus "$device" -b
 if [ -n "${LX_IOS_REUSE_SIMULATOR_APP:-}" ]; then
   app="$LX_IOS_REUSE_SIMULATOR_APP"
 else
   xcodebuild -workspace ios/LxMusicMobile.xcworkspace -scheme LxMusicMobile \
-  -configuration Release -sdk iphonesimulator -destination "id=$device" \
+  -configuration Release -sdk iphonesimulator -destination "generic/platform=iOS Simulator" \
   -derivedDataPath build/SimulatorData ARCHS="$(uname -m)" IPHONEOS_DEPLOYMENT_TARGET=15.0 \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
   build 2>&1 | tee build/simulator-build.log
   app=build/SimulatorData/Build/Products/Release-iphonesimulator/LxMusicMobile.app
 fi
+app="$(cd "$(dirname "$app")" && pwd)/$(basename "$app")"
+test -d "$app"
+test -x "$app/LxMusicMobile"
 bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
+device=$(xcrun simctl create 'LX Music CI' com.apple.CoreSimulator.SimDeviceType.iPhone-16 "$runtime")
+xcrun simctl boot "$device"
+xcrun simctl bootstatus "$device" -b
 python3 scripts/check-ios-network.py "$app/Info.plist"
 # A qualified hostname is essential: localhost/IP exceptions would hide the ATS bug.
 echo '127.0.0.1 lx-ios-fixture.test' | sudo tee -a /etc/hosts
@@ -39,7 +43,15 @@ curl --noproxy '*' --fail --silent http://lx-ios-fixture.test:18765/search >/dev
 
 # Same binary and endpoint, old policy: prove that HTTP really was blocked.
 /usr/libexec/PlistBuddy -c 'Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true' "$app/Info.plist"
-xcrun simctl install "$device" "$app"
+echo "Installing $app on $device"
+for install_attempt in $(seq 1 3); do
+  if xcrun simctl install "$device" "$app"; then break; fi
+  echo "install attempt $install_attempt failed; retrying" >&2
+  sleep 3
+  xcrun simctl boot "$device" >/dev/null 2>&1 || true
+  xcrun simctl bootstatus "$device" -b >/dev/null 2>&1 || true
+done
+xcrun simctl get_app_container "$device" "$bundle_id" app >/dev/null
 SIMCTL_CHILD_LX_IOS_SMOKE=1 SIMCTL_CHILD_LX_IOS_HTTP_PROBE=1 xcrun simctl launch --console "$device" "$bundle_id" > build/simulator-ats-control.log 2>&1 &
 control_pid=$!
 container=$(xcrun simctl get_app_container "$device" "$bundle_id" data)

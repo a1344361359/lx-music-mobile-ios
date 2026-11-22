@@ -1,4 +1,4 @@
-import { useRef, useImperativeHandle, forwardRef, useState } from 'react'
+import { useRef, useImperativeHandle, forwardRef, useState, useCallback } from 'react'
 import Text from '@/components/common/Text'
 import { View, TouchableOpacity } from 'react-native'
 import { createStyle, openUrl } from '@/utils/tools'
@@ -63,6 +63,7 @@ export interface UserApiEditModalType {
 
 export default forwardRef<UserApiEditModalType, {}>((props, ref) => {
   const dialogRef = useRef<DialogType>(null)
+  const pendingProceedRef = useRef<(() => void) | null>(null)
   // const sourceSelectorRef = useRef<SourceSelectorType>(null)
   // const inputRef = useRef<UrlInputType>(null)
   const [visible, setVisible] = useState(false)
@@ -99,6 +100,23 @@ export default forwardRef<UserApiEditModalType, {}>((props, ref) => {
     void openUrl('https://lyswhut.github.io/lx-music-doc/mobile/custom-source')
   }
 
+  const hideDialogForNativePicker = useCallback((proceed: () => void) => {
+    pendingProceedRef.current = proceed
+    setVisible(false)
+    // The native FilePickerModule refuses to present above an RN modal.
+    // Wait for the fade-out and unmount to finish before opening it.
+    setTimeout(() => {
+      const pending = pendingProceedRef.current
+      pendingProceedRef.current = null
+      pending?.()
+    }, 400)
+  }, [])
+
+  const showDialogAfterNativePicker = useCallback(() => {
+    setVisible(true)
+    requestAnimationFrame(() => dialogRef.current?.setVisible(true))
+  }, [])
+
   return (
     visible
       ? (
@@ -123,7 +141,11 @@ export default forwardRef<UserApiEditModalType, {}>((props, ref) => {
               <Button style={{ ...styles.btn, backgroundColor: theme['c-button-background'] }} onPress={handleCancel}>
                 <Text size={14} color={theme['c-button-font']}>{t('close')}</Text>
               </Button>
-              <ImportBtn btnStyle={{ ...styles.btn, backgroundColor: theme['c-button-background'] }} />
+              <ImportBtn
+                btnStyle={{ ...styles.btn, backgroundColor: theme['c-button-background'] }}
+                onBeforeNativePicker={hideDialogForNativePicker}
+                onAfterNativePicker={showDialogAfterNativePicker}
+              />
             </View>
           </Dialog>
         ) : null

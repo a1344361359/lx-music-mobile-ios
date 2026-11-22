@@ -7,6 +7,7 @@ import Vertical from './Vertical'
 import Horizontal from './Horizontal'
 import { navigations } from '@/navigation'
 import settingState from '@/store/setting/state'
+import IOSDesktopLyric from '@/components/IOSDesktopLyric'
 
 
 interface Props {
@@ -33,6 +34,7 @@ export default ({ componentId }: Props) => {
           ? <Horizontal />
           : <Vertical />
       }
+      <IOSDesktopLyric />
     </PageContent>
   )
 }

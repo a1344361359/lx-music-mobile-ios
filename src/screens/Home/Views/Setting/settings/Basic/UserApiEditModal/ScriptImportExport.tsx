@@ -1,7 +1,15 @@
 import ChoosePath, { type ChoosePathType } from '@/components/common/ChoosePath'
 import { USER_API_SOURCE_FILE_EXT_RXP } from '@/config/constant'
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import { Platform } from 'react-native'
 import { handleImportLocalFile } from './action'
+import { selectFile } from '@/utils/fs'
+import { TEMP_FILE_PATH, toast } from '@/utils/tools'
+
+export interface ScriptImportExportProps {
+  onBeforeNativePicker?: (proceed: () => void) => void
+  onAfterNativePicker?: () => void
+}
 
 export interface SelectInfo {
   // listInfo: LX.List.MyListInfo
@@ -25,33 +33,48 @@ export interface ScriptImportExportType {
   // export: (listInfo: LX.List.MyListInfo, index: number) => void
 }
 
-export default forwardRef<ScriptImportExportType, {}>((props, ref) => {
+export default forwardRef<ScriptImportExportType, ScriptImportExportProps>((props, ref) => {
   const [visible, setVisible] = useState(false)
   const choosePathRef = useRef<ChoosePathType>(null)
   const selectInfoRef = useRef<SelectInfo>((initSelectInfo as SelectInfo))
-  // console.log('render import export')
+
+  const openBuiltInPicker = () => {
+    const options = {
+      title: global.i18n.t('user_api_import_desc'),
+      dirOnly: false,
+      filter: USER_API_SOURCE_FILE_EXT_RXP,
+    }
+    if (visible) choosePathRef.current?.show(options)
+    else {
+      setVisible(true)
+      requestAnimationFrame(() => choosePathRef.current?.show(options))
+    }
+  }
 
   useImperativeHandle(ref, () => ({
     import() {
-      selectInfoRef.current = {
-        action: 'import',
-      }
-      if (visible) {
-        choosePathRef.current?.show({
-          title: global.i18n.t('user_api_import_desc'),
-          dirOnly: false,
-          filter: USER_API_SOURCE_FILE_EXT_RXP,
-        })
-      } else {
-        setVisible(true)
-        requestAnimationFrame(() => {
-          choosePathRef.current?.show({
-            title: global.i18n.t('user_api_import_desc'),
-            dirOnly: false,
-            filter: USER_API_SOURCE_FILE_EXT_RXP,
+      selectInfoRef.current = { action: 'import' }
+      if (Platform.OS === 'ios' && props.onBeforeNativePicker) {
+        // The uploaded IPA waits until every RN modal is gone before presenting
+        // UIDocumentPicker. Close the source-manager dialog first, then call the
+        // native picker directly instead of presenting it above that dialog.
+        props.onBeforeNativePicker(() => {
+          void selectFile({
+            extTypes: USER_API_SOURCE_FILE_EXT_RXP,
+            toPath: TEMP_FILE_PATH,
+          }).then(file => {
+            if (file?.data) handleImportLocalFile(file.data)
+          }).catch((err: any) => {
+            if (err?.code !== 'picker_cancelled') {
+              toast(`打开系统文件选择器失败：${err?.message ?? '未知错误'}`, 'long')
+            }
+          }).finally(() => {
+            props.onAfterNativePicker?.()
           })
         })
+        return
       }
+      openBuiltInPicker()
     },
     // export(listInfo, index) {
     //   selectInfoRef.current = {

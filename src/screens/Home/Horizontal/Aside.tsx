@@ -10,8 +10,10 @@ import type { InitState } from '@/store/common/state'
 import { exitApp, setNavActiveId } from '@/core/common'
 import { BorderWidths } from '@/theme'
 import { useSettingValue } from '@/store/setting/hook'
+import Text from '@/components/common/Text'
+import { useI18n } from '@/lang'
 
-const NAV_WIDTH = 68
+const NAV_WIDTH = 76
 
 const styles = createStyle({
   container: {
@@ -43,23 +45,24 @@ const styles = createStyle({
     paddingBottom: 15,
   },
   menuItem: {
-    flexDirection: 'row',
-    paddingTop: 15,
-    paddingBottom: 15,
-    // paddingLeft: 25,
-    // paddingRight: 25,
+    flexDirection: 'column',
+    paddingTop: 8,
+    paddingBottom: 7,
+    marginHorizontal: 6,
+    marginBottom: 2,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    // backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
   iconContent: {
-    // width: 24,
-    // backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    height: 24,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  text: {
-    paddingLeft: 15,
-    // fontWeight: '500',
+  label: {
+    marginTop: 2,
+    width: '100%',
+    textAlign: 'center',
   },
 })
 
@@ -86,19 +89,21 @@ const MenuItem = ({ id, icon, onPress }: {
   // const t = useI18n()
   const activeId = useNavActiveId()
   const theme = useTheme()
+  const t = useI18n()
+  const label = t(id)
 
   return activeId == id
-    ? <View style={styles.menuItem}>
+    ? <View style={[styles.menuItem, { backgroundColor: theme['c-primary-background-active'] }]}>
         <View style={styles.iconContent}>
           <Icon name={icon} size={20} color={theme['c-primary-font-active']} />
         </View>
-        {/* <Text style={styles.text} size={14} color={theme['c-primary-font']}>{t(id)}</Text> */}
+        <Text style={styles.label} size={9} color={theme['c-primary-font']} numberOfLines={1}>{label}</Text>
       </View>
     : <TouchableOpacity style={styles.menuItem} onPress={() => { onPress(id) }}>
         <View style={styles.iconContent}>
           <Icon name={icon} size={20} color={theme['c-font-label']} />
         </View>
-        {/* <Text style={styles.text} size={14}>{t(id)}</Text> */}
+        <Text style={styles.label} size={9} color={theme['c-font-label']} numberOfLines={1}>{label}</Text>
       </TouchableOpacity>
 }
 

@@ -533,5 +533,10 @@
   "setting_play_show_live_activity": "Live lyrics on Dynamic Island",
   "setting_play_live_activity_played_color": "Played lyric color",
   "setting_play_live_activity_unplayed_color": "Unplayed lyric color",
-  "setting_play_live_activity_color_tip": "These colors apply to the current, played and upcoming lyric lines. Enter #RRGGBB to customize."
+  "setting_play_live_activity_color_tip": "These colors apply to the current, played and upcoming lyric lines. Enter #RRGGBB to customize.",
+  "songlist_platform_import": "Import playlist",
+  "songlist_platform_import_title": "Import platform playlist",
+  "songlist_platform_import_loading": "Parsing...",
+  "songlist_platform_import_btn": "Parse & import",
+  "setting_platform_auth": "Platform credentials"
 }

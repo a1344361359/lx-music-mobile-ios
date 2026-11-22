@@ -4,6 +4,7 @@ import { setShouldUseDarkColors, applyTheme } from '@/core/theme'
 import { getTheme } from '@/theme/themes/index'
 import settingState from '@/store/setting/state'
 import StatusBar from '@/components/common/StatusBar'
+import { updateSetting } from '@/core/common'
 // import { Dimensions, PixelRatio } from 'react-native'
 
 
@@ -17,6 +18,7 @@ export default async(setting: LX.AppSetting) => {
     })
   }
 
+  if (settingState.setting['theme.id'] === 'green') updateSetting({ 'theme.id': 'kmusic' })
   applyTheme(await getTheme())
 
   global.state_event.on('themeUpdated', (theme) => {

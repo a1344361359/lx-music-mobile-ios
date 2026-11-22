@@ -13,11 +13,12 @@ import { useSettingValue } from '@/store/setting/hook'
 import Text from '@/components/common/Text'
 import { useI18n } from '@/lang'
 
-const NAV_WIDTH = 76
+const NAV_WIDTH = 84
 
 const styles = createStyle({
   container: {
     flexGrow: 0,
+    backgroundColor: '#0B0B0E',
     // flex: 1,
     // alignItems: 'center',
     // justifyContent: 'center',
@@ -27,8 +28,8 @@ const styles = createStyle({
     width: NAV_WIDTH,
   },
   header: {
-    paddingTop: 15,
-    paddingBottom: 15,
+    paddingTop: 18,
+    paddingBottom: 14,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -46,9 +47,9 @@ const styles = createStyle({
   },
   menuItem: {
     flexDirection: 'column',
-    paddingTop: 8,
-    paddingBottom: 7,
-    marginHorizontal: 6,
+    paddingTop: 9,
+    paddingBottom: 8,
+    marginHorizontal: 8,
     marginBottom: 2,
     borderRadius: 6,
     justifyContent: 'center',
@@ -60,7 +61,7 @@ const styles = createStyle({
     alignItems: 'center',
   },
   label: {
-    marginTop: 2,
+    marginTop: 3,
     width: '100%',
     textAlign: 'center',
   },
@@ -72,7 +73,8 @@ const Header = () => {
   return (
     <View style={{ paddingTop: statusBarHeight }}>
       <View style={styles.header}>
-        <Icon name="logo" color={theme['c-primary-dark-100-alpha-300']} size={22} />
+        <Icon name="logo" color={theme['c-primary']} size={26} />
+        <Text size={9} color={theme['c-font-label']} style={{ marginLeft: 5 }}>KMUSIC</Text>
         {/* <Text style={styles.headerText} size={16} color={theme['c-primary-dark-100-alpha-300']}>LX Music</Text> */}
       </View>
     </View>

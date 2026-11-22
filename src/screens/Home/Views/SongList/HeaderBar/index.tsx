@@ -4,7 +4,6 @@ import { View } from 'react-native'
 // import { useGetter, useDispatch } from '@/store'
 import SortTab, { type SortTabProps, type SortTabType } from './SortTab'
 // import Tag from './Tag'
-// import OpenList from './OpenList'
 import { createStyle } from '@/utils/tools'
 // import { BorderWidths } from '@/theme'
 import SourceSelector, {
@@ -14,8 +13,7 @@ import SourceSelector, {
 import { type Source } from '@/store/songlist/state'
 // import { useTheme } from '@/store/theme/hook'
 import Tag, { type TagType, type TagProps } from './Tag'
-import OpenList, { type OpenListType } from './OpenList'
-import SodaImport from './SodaImport'
+import PlatformImport from './PlatformImport'
 // import { BorderWidths } from '@/theme'
 
 export interface HeaderBarProps {
@@ -32,7 +30,6 @@ export interface HeaderBarType {
 export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagChange, onSourceChange }, ref) => {
   const sortTabRef = useRef<SortTabType>(null)
   const tagRef = useRef<TagType>(null)
-  const openListRef = useRef<OpenListType>(null)
   const sourceSelectorRef = useRef<SourceSelectorType>(null)
   // const theme = useTheme()
 
@@ -41,7 +38,6 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagC
       sortTabRef.current?.setSource(source, sortId)
       tagRef.current?.setSelectedTagInfo(source, tagName, tagId)
       sourceSelectorRef.current?.setSource(source)
-      openListRef.current?.setInfo(source)
     },
   }), [])
 
@@ -50,8 +46,7 @@ export default forwardRef<HeaderBarType, HeaderBarProps>(({ onSortChange, onTagC
     <View style={styles.searchBar}>
       <SortTab ref={sortTabRef} onSortChange={onSortChange} />
       <Tag ref={tagRef} onTagChange={onTagChange} />
-      <SodaImport />
-      <OpenList ref={openListRef} />
+      <PlatformImport />
       <SourceSelector ref={sourceSelectorRef} onSourceChange={onSourceChange} />
     </View>
   )

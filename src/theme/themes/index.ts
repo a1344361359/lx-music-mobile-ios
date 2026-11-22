@@ -1,11 +1,14 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { getUserTheme, saveUserTheme } from '@/utils/data'
 import themes from '@/theme/themes/themes'
+import kmusicTheme from '@/theme/themes/kmusic'
 import settingState from '@/store/setting/state'
 import themeState from '@/store/theme/state'
 import { isUrl } from '@/utils'
 import { privateStorageDirectoryPath } from '@/utils/fs'
 import { type ImageSourcePropType } from 'react-native'
+
+const allThemes = [...themes, kmusicTheme] as LX.Theme[]
 
 export const BG_IMAGES = {
   'china_ink.jpg': require('./images/china_ink.jpg') as ImageSourcePropType,
@@ -21,7 +24,7 @@ export const getAllThemes = async() => {
   // eslint-disable-next-line require-atomic-updates
   userThemes ??= await getUserTheme()
   return {
-    themes,
+    themes: allThemes as any,
     userThemes,
     dataPath: privateStorageDirectoryPath + '/theme_images',
   }
@@ -68,7 +71,7 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
     theme.config.extInfo[k] = theme.config.themeColors[v.replace(varColorRxp, '$1') as ColorsKey]
   }
 
-  return {
+  const active = {
     id: theme.id,
     name: theme.name,
     isDark: theme.isDark,
@@ -94,6 +97,20 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
     'c-border-background': theme.config.themeColors['c-primary-light-100-alpha-700'],
     'bg-image': bgImg,
   } as const
+  if (theme.id === 'kmusic') {
+    return {
+      ...active,
+      'c-app-background': 'rgb(8, 8, 10)',
+      'c-main-background': 'rgb(12, 12, 16)',
+      'c-content-background': 'rgb(17, 17, 21)',
+      'c-border-background': 'rgba(255, 255, 255, 0.08)',
+      'c-font': 'rgb(245, 245, 247)',
+      'c-font-label': 'rgb(142, 142, 147)',
+      'c-primary-background': 'rgba(255, 59, 48, 0.16)',
+      'c-primary-background-active': 'rgba(255, 59, 48, 0.26)',
+    } as const
+  }
+  return active
 }
 
 
@@ -123,15 +140,15 @@ export const getTheme = async() => {
   // themeId = 'naruto'
   // themeId = 'pink'
   // themeId = 'black'
-  let theme: LocalTheme | LX.Theme | undefined = themes.find(theme => theme.id == themeId)
+  let theme: LX.Theme | undefined = allThemes.find(theme => theme.id == themeId)
   if (!theme) {
     userThemes = await getUserTheme()
     theme = userThemes.find(theme => theme.id == themeId)
     if (!theme) {
       themeId = settingState.setting['theme.id'] == 'auto' && shouldUseDarkColors ? 'black' : 'green'
-      theme = themes.find(theme => theme.id == themeId) as LX.Theme
+      theme = allThemes.find(theme => theme.id == themeId)
     }
   }
 
-  return theme
+  return theme as LX.Theme
 }

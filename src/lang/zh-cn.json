@@ -533,5 +533,10 @@
   "setting_play_show_live_activity": "灵动岛实时歌词",
   "setting_play_live_activity_played_color": "已播放歌词颜色",
   "setting_play_live_activity_unplayed_color": "未播放歌词颜色",
-  "setting_play_live_activity_color_tip": "当前播放行、已播放行和未播放行都会使用这两种颜色，输入 #RRGGBB 可自定义。"
+  "setting_play_live_activity_color_tip": "当前播放行、已播放行和未播放行都会使用这两种颜色，输入 #RRGGBB 可自定义。",
+  "songlist_platform_import": "导入歌单",
+  "songlist_platform_import_title": "导入平台歌单",
+  "songlist_platform_import_loading": "解析中...",
+  "songlist_platform_import_btn": "解析并导入",
+  "setting_platform_auth": "平台凭证"
 }

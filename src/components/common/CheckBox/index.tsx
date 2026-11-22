@@ -6,6 +6,7 @@ import { createStyle, tipDialog } from '@/utils/tools'
 import { scaleSizeH, scaleSizeW } from '@/utils/pixelRatio'
 import { useTheme } from '@/store/theme/hook'
 import Text from '../Text'
+import { useUIScale } from '../UIScaleContext'
 import { Icon } from '../Icon'
 
 export interface CheckBoxProps {
@@ -25,6 +26,7 @@ export interface CheckBoxProps {
 
 export default ({ check, label, children, onChange, helpTitle, helpDesc, disabled = false, need = false, marginRight = 0, marginBottom = 0, size = 1 }: CheckBoxProps) => {
   const theme = useTheme()
+  const uiScale = useUIScale()
   const [isDisabled, setDisabled] = useState(false)
   const tintColors = {
     true: theme['c-primary'],
@@ -68,8 +70,8 @@ export default ({ check, label, children, onChange, helpTitle, helpDesc, disable
   }, [helpTitle, helpDesc, size])
 
 
-  const contentStyle = { ...styles.content, marginBottom: scaleSizeH(marginBottom) }
-  const labelStyle = { ...styles.label, marginRight: scaleSizeW(marginRight) }
+  const contentStyle = { ...styles.content, marginRight: styles.content.marginRight * uiScale, marginBottom: scaleSizeH(marginBottom) * uiScale }
+  const labelStyle = { ...styles.label, marginRight: scaleSizeW(marginRight) * uiScale }
 
   return (
     disabled

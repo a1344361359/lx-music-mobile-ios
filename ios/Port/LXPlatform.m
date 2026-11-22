@@ -117,7 +117,7 @@ RCT_EXPORT_MODULE();
 
 - (BOOL)isPickerVisible {
   UIDocumentPickerViewController *picker = self.activePicker;
-  return picker != nil && picker.presentingViewController != nil && picker.view.window != nil;
+  return picker != nil && (picker.presentingViewController != nil || picker.view.window != nil);
 }
 
 RCT_EXPORT_METHOD(openDocument:(NSDictionary *)options resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {

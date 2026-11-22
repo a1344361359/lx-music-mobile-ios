@@ -12,8 +12,10 @@ import { windowSizeTools } from './windowSizeTools'
 const designWidth = 375.0
 const designHeight = 667.0
 
-// iOS 使用系统标准密度，避免历史 120% 字号把整个界面撑大
-const getAppFontScale = () => Platform.OS === 'ios' ? Math.min(global.lx.fontSize, 1) : global.lx.fontSize
+// iOS 的这套桌面尺寸换算会把控件缩到约三分之一，这里补回基础倍率。
+// 字号仍跟随用户的“字体大小”设置，最大保留 120%。
+const IOS_UI_BASE = 2.0
+const getAppFontScale = () => Platform.OS === 'ios' ? Math.min(global.lx.fontSize, 1.2) : global.lx.fontSize
 
 // 获取屏幕的dp
 const size = windowSizeTools.getSize()
@@ -49,7 +51,7 @@ export function getTextSize(size: number) {
   let scaleHeight = screenH / designHeight
   // console.log(scaleWidth, scaleHeight)
   let scale = Math.min(scaleWidth, scaleHeight, 1.3)
-  size = Math.floor(size * scale / fontScale)
+  size = Math.floor(size * scale * (Platform.OS === 'ios' ? IOS_UI_BASE : 1) / fontScale)
   // console.log(size)
   return size
 }
@@ -66,7 +68,7 @@ export function scaleSizeH(size: number) {
   // console.log(screenPxH / designHeight)
   // let scaleHeight = size * Math.min(screenPxH / designHeight, 3.1)
   let scaleHeight = size * scale
-  size = Math.floor(scaleHeight / pixelRatio)
+  size = Math.floor(scaleHeight * (Platform.OS === 'ios' ? IOS_UI_BASE : 1) / pixelRatio)
   return size * getAppFontScale()
 }
 
@@ -79,7 +81,7 @@ export function scaleSizeW(size: number) {
   // console.log(screenPxW / designWidth)
   // let scaleWidth = size * Math.min(screenPxW / designWidth, 3.1)
   let scaleWidth = size * scale
-  size = Math.floor(scaleWidth / pixelRatio)
+  size = Math.floor(scaleWidth * (Platform.OS === 'ios' ? IOS_UI_BASE : 1) / pixelRatio)
   return size * getAppFontScale()
 }
 

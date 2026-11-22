@@ -13,6 +13,7 @@ import { pause, play, playNext, playPrev } from '@/core/player/player'
 
 let isInitialized = false
 let lastAutoResumeAt = 0
+let lastUserPauseAt = 0
 
 // 某些系统/耳机在后台会错误地暂停 RNTP；只要用户没有主动暂停，就在短暂延迟后恢复。
 const tryResumeBackgroundPlayback = async() => {
@@ -20,6 +21,7 @@ const tryResumeBackgroundPlayback = async() => {
   if (!playerState.isPlay) return
   const now = Date.now()
   if (now - lastAutoResumeAt < 2000) return
+  if (now - lastUserPauseAt < 3000) return
   lastAutoResumeAt = now
   setTimeout(() => {
     if (AppState.currentState !== 'active') void TrackPlayer.play()
@@ -46,11 +48,13 @@ const registerPlaybackService = async() => {
   console.log('reg services...')
   TrackPlayer.addEventListener(TPEvent.RemotePlay, () => {
     // console.log('remote-play')
+    lastUserPauseAt = 0
     play()
   })
 
   TrackPlayer.addEventListener(TPEvent.RemotePause, () => {
     // console.log('remote-pause')
+    lastUserPauseAt = Date.now()
     void pause()
   })
 
@@ -107,8 +111,11 @@ const registerPlaybackService = async() => {
         global.app_event.pause()
         break
       case TPState.Paused:
-        if (playerState.isPlay) void tryResumeBackgroundPlayback()
-        else setBackgroundAudioPlaying(false)
+        if (playerState.isPlay && AppState.currentState !== 'active') {
+          void tryResumeBackgroundPlayback()
+          break
+        }
+        setBackgroundAudioPlaying(false)
         global.app_event.playerPause()
         global.app_event.pause()
         break

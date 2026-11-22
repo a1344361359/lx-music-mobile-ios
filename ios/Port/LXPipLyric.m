@@ -84,8 +84,23 @@ RCT_EXPORT_MODULE(LXPipLyric)
     _lastLineIndex = -1;
     _basePosition = 0;
     _basePositionTime = CACurrentMediaTime();
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(handleAppBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
   }
   return self;
+}
+
+- (void)dealloc {
+  [NSNotificationCenter.defaultCenter removeObserver:self];
+}
+
+- (void)handleAppBackground {
+  if (@available(iOS 15.0, *)) {
+    if (self.configured == NO || self.pipController == nil) return;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      if (self.pipController.isPictureInPictureActive) return;
+      if (self.pipController.isPictureInPicturePossible) [self.pipController startPictureInPicture];
+    });
+  }
 }
 
 - (UIWindow *)keyWindow {
@@ -108,10 +123,11 @@ RCT_EXPORT_MODULE(LXPipLyric)
   if (self.displayView != nil) return;
   UIWindow *window = [self keyWindow];
   if (window == nil) return;
-  LXSampleBufferView *view = [[LXSampleBufferView alloc] initWithFrame:CGRectMake(0, 0, 2, 2)];
-  view.alpha = 0.01;
+  LXSampleBufferView *view = [[LXSampleBufferView alloc] initWithFrame:CGRectMake(0, window.bounds.size.height - 36.0, 320, 36)];
+  view.alpha = 1.0;
   view.userInteractionEnabled = NO;
   view.clipsToBounds = YES;
+  view.backgroundColor = UIColor.clearColor;
   self.displayView = view;
   self.displayLayer = (AVSampleBufferDisplayLayer *)view.layer;
   self.displayLayer.videoGravity = AVLayerVideoGravityResize;
@@ -125,8 +141,8 @@ RCT_EXPORT_MODULE(LXPipLyric)
     self.displayLayer.controlTimebase = timebase;
     CFRelease(timebase);
   }
-  [window.rootViewController.view addSubview:view];
-  [window.rootViewController.view bringSubviewToFront:view];
+  // 放在最底层，不遮挡正常界面，但保留在窗口层级中供系统画中画取源。
+  [window.rootViewController.view insertSubview:view atIndex:0];
 }
 
 - (NSArray<NSDictionary *> *)lines {
@@ -167,7 +183,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
     return;
   }
   if (@available(iOS 15.0, *)) {
-    if (AVPictureInPictureController.isPictureInPictureSupported == NO || self.displayLayer == nil) {
+    if ([AVPictureInPictureController isPictureInPictureSupported] == NO || self.displayLayer == nil) {
       [self sendEventWithName:@"LXPipLyricFailed" body:@{@"message": @"当前设备不支持系统画中画"}];
       return;
     }
@@ -228,8 +244,12 @@ RCT_EXPORT_MODULE(LXPipLyric)
   NSNumber *widthValue = self.lyricState[@"width"];
   CGFloat widthPercent = widthValue != nil ? MAX(10.0, MIN(100.0, widthValue.doubleValue)) : 100.0;
   CGFloat width = 248.0 + (widthPercent / 100.0) * 148.0;
-  CGFloat height = singleLine ? 46.0 : 82.0;
+  CGFloat height = singleLine ? 36.0 : 68.0;
   CGSize pointSize = CGSizeMake(width, height);
+  if (self.displayView.superview != nil) {
+    CGFloat superHeight = self.displayView.superview.bounds.size.height;
+    self.displayView.frame = CGRectMake(0, MAX(0, superHeight - height), pointSize.width, pointSize.height);
+  }
 
   UIColor *playedColor = LXColorFromSetting(self.lyricState[@"playedColor"], UIColor.whiteColor);
   UIColor *unplayedColor = LXColorFromSetting(self.lyricState[@"unplayedColor"], [UIColor colorWithWhite:0.78 alpha:1.0]);
@@ -237,8 +257,8 @@ RCT_EXPORT_MODULE(LXPipLyric)
   NSString *currentText = texts[@"current"];
   NSString *nextText = texts[@"next"];
   NSNumber *fontValue = self.lyricState[@"fontSize"];
-  CGFloat fontBase = fontValue != nil ? MAX(12.0, MIN(30.0, fontValue.doubleValue / 10.0)) : 17.0;
-  if (singleLine) fontBase = MAX(13.0, MIN(24.0, fontBase));
+  CGFloat fontBase = fontValue != nil ? MAX(12.0, MIN(24.0, fontValue.doubleValue / 12.0)) : 15.0;
+  if (singleLine) fontBase = MAX(13.0, MIN(22.0, fontBase));
 
   UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat defaultFormat];
   format.scale = 3.0;
@@ -271,20 +291,20 @@ RCT_EXPORT_MODULE(LXPipLyric)
       NSParagraphStyleAttributeName: paragraph,
     };
 
-    CGFloat textWidth = pointSize.width - 78.0;
+    CGFloat textWidth = pointSize.width - 70.0;
     if (singleLine) {
       CGSize textSize = [currentText sizeWithAttributes:currentAttributes];
-      CGFloat y = MAX(7.0, (height - textSize.height) / 2.0 - 1.0);
-      [currentText drawInRect:CGRectMake(22.0, y, textWidth, height - 12.0) withAttributes:currentAttributes];
+      CGFloat y = MAX(5.0, (height - textSize.height) / 2.0 - 1.0);
+      [currentText drawInRect:CGRectMake(22.0, y, textWidth, height - 10.0) withAttributes:currentAttributes];
     } else {
-      [currentText drawInRect:CGRectMake(22.0, 12.0, textWidth, fontBase + 5.0) withAttributes:currentAttributes];
-      [nextText drawInRect:CGRectMake(22.0, 43.0, textWidth, fontBase + 2.0) withAttributes:nextAttributes];
+      [currentText drawInRect:CGRectMake(22.0, 9.0, textWidth, fontBase + 5.0) withAttributes:currentAttributes];
+      [nextText drawInRect:CGRectMake(22.0, 36.0, textWidth, fontBase + 2.0) withAttributes:nextAttributes];
     }
 
     UIImage *note = [UIImage systemImageNamed:@"music.note"];
     if (note != nil) {
       note = [note imageWithTintColor:[UIColor colorWithWhite:1.0 alpha:0.9] renderingMode:UIImageRenderingModeAlwaysOriginal];
-      [note drawInRect:CGRectMake(pointSize.width - 40.0, (pointSize.height - 18.0) / 2.0, 18.0, 18.0)];
+      [note drawInRect:CGRectMake(pointSize.width - 36.0, (pointSize.height - 16.0) / 2.0, 16.0, 16.0)];
     }
   }];
 
@@ -317,7 +337,11 @@ RCT_EXPORT_MODULE(LXPipLyric)
 
   CMVideoFormatDescriptionRef formatDescription = NULL;
   CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer, &formatDescription);
-  CMTime presentationTime = CMTimeMakeWithSeconds(CACurrentMediaTime(), 1000);
+  if (formatDescription == NULL) {
+    CVPixelBufferRelease(pixelBuffer);
+    return;
+  }
+  CMTime presentationTime = self.displayLayer.controlTimebase != NULL ? CMTimebaseGetTime(self.displayLayer.controlTimebase) : kCMTimeZero;
   CMSampleTimingInfo timing = {presentationTime, kCMTimeInvalid, kCMTimeInvalid};
   CMSampleBufferRef sampleBuffer = NULL;
   CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, pixelBuffer, formatDescription, &timing, &sampleBuffer);
@@ -444,6 +468,7 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
 
 @interface LXBackgroundAudioModule : NSObject <RCTBridgeModule>
 @property (nonatomic, assign) BOOL shouldPlay;
+@property (nonatomic, strong) NSTimer *keepAliveTimer;
 @end
 
 static LXBackgroundAudioModule *LXSharedBackgroundAudio = nil;
@@ -453,6 +478,7 @@ static LXBackgroundAudioModule *LXSharedBackgroundAudio = nil;
 RCT_EXPORT_MODULE(LXBackgroundAudio)
 
 + (BOOL)requiresMainQueueSetup { return YES; }
+- (dispatch_queue_t)methodQueue { return dispatch_get_main_queue(); }
 
 - (instancetype)init {
   if (self = [super init]) {
@@ -466,6 +492,7 @@ RCT_EXPORT_MODULE(LXBackgroundAudio)
 
 - (void)dealloc {
   [NSNotificationCenter.defaultCenter removeObserver:self];
+  [self.keepAliveTimer invalidate];
 }
 
 - (void)handleBackground {
@@ -494,7 +521,24 @@ RCT_EXPORT_METHOD(setPlaying:(BOOL)playing) {
   if (@available(iOS 13.0, *)) {
     MPNowPlayingInfoCenter.defaultCenter.playbackState = playing ? MPNowPlayingPlaybackStatePlaying : MPNowPlayingPlaybackStatePaused;
   }
-  if (playing) [self activatePlaybackSession];
+  if (playing) {
+    [self activatePlaybackSession];
+    if (self.keepAliveTimer == nil) {
+      self.keepAliveTimer = [NSTimer scheduledTimerWithTimeInterval:8.0 target:self selector:@selector(handleKeepAlive) userInfo:nil repeats:YES];
+      [[NSRunLoop mainRunLoop] addTimer:self.keepAliveTimer forMode:NSRunLoopCommonModes];
+    }
+  } else {
+    [self.keepAliveTimer invalidate];
+    self.keepAliveTimer = nil;
+  }
+}
+
+- (void)handleKeepAlive {
+  if (self.shouldPlay == NO) return;
+  [self activatePlaybackSession];
+  if (@available(iOS 13.0, *)) {
+    MPNowPlayingInfoCenter.defaultCenter.playbackState = MPNowPlayingPlaybackStatePlaying;
+  }
 }
 
 RCT_EXPORT_METHOD(refresh) {

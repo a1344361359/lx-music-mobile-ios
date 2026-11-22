@@ -14,6 +14,7 @@ interface PipState {
   singleLine: boolean
   width: number
   fontSize: number
+  offset: number
   playedColor: string
   unplayedColor: string
 }
@@ -28,6 +29,7 @@ export default () => {
   const singleLine = useSettingValue('desktopLyric.isSingleLine')
   const width = useSettingValue('desktopLyric.width')
   const fontSize = useSettingValue('desktopLyric.style.fontSize')
+  const lyricOffset = useSettingValue('desktopLyric.lyricOffset')
   const playedColor = useSettingValue('desktopLyric.style.lyricPlayedColor')
   const unplayedColor = useSettingValue('desktopLyric.style.lyricUnplayColor')
   const configuredRef = useRef(false)
@@ -42,6 +44,7 @@ export default () => {
     singleLine,
     width,
     fontSize,
+    offset: lyricOffset / 1000,
     playedColor,
     unplayedColor,
   })
@@ -66,7 +69,7 @@ export default () => {
       void LXPipLyric.update(state)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, lines, isPlay, progress.nowPlayTime, singleLine, width, fontSize, playedColor, unplayedColor])
+  }, [enabled, lines, isPlay, progress.nowPlayTime, singleLine, width, fontSize, lyricOffset, playedColor, unplayedColor])
 
   useEffect(() => {
     if (Platform.OS !== 'ios' || !LXPipLyric) return

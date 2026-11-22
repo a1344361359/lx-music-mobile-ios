@@ -29,6 +29,7 @@ const buildPayload = (music = playerState.musicInfo) => {
     positionAt: Date.now(),
     isPlaying: !!playerState.isPlay,
     playbackRate: settingState.setting['player.playbackRate'] || 1,
+    lyricOffset: (settingState.setting['desktopLyric.lyricOffset'] || 0) / 1000,
     playedColor: normalizeHexColor(settingState.setting['player.liveActivityLyricPlayedColor'], '#31C27C'),
     unplayedColor: normalizeHexColor(settingState.setting['player.liveActivityLyricUnplayedColor'], '#FFFFFF'),
     lines: getLiveLyricLines(),

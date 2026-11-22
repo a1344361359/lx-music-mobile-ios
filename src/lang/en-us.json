@@ -540,5 +540,7 @@
   "songlist_platform_import_btn": "Parse & import",
   "setting_platform_auth": "Platform credentials",
   "theme_kmusic": "KMusic Dark",
-  "theme_kmusic_light": "KMusic Light"
+  "theme_kmusic_light": "KMusic Light",
+  "setting_lyric_desktop_speed": "Lyric Timing",
+  "setting_lyric_desktop_speed_tip": "Negative values make lyrics earlier; positive values delay them. Your adjustment is remembered."
 }

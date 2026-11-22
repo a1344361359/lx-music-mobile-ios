@@ -267,6 +267,11 @@ declare global {
       'desktopLyric.width': number
 
       /**
+       * 歌词时间偏移，单位毫秒；负值提前，正值延后
+       */
+      'desktopLyric.lyricOffset': number
+
+      /**
        * 桌面歌词最大行数
        */
       'desktopLyric.maxLineNum': number

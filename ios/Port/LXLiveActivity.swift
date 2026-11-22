@@ -24,6 +24,7 @@ final class LXLiveActivity: NSObject {
     private var baseTime: CFTimeInterval = CACurrentMediaTime()
     private var isPlaying = false
     private var playbackRate: Double = 1
+    private var lyricOffset: Double = 0
     private var currentIndex = -2
     private var lastProgress = -1.0
     private var timer: DispatchSourceTimer?
@@ -80,6 +81,8 @@ final class LXLiveActivity: NSObject {
         let nextPlaying = bool(payload, "isPlaying")
         let rawRate = number(payload, "playbackRate")
         let nextRate = rawRate > 0 ? rawRate : 1
+        let rawLyricOffset = number(payload, "lyricOffset")
+        let nextLyricOffset = max(-5, min(5, rawLyricOffset))
         let nextLines = parseLines(payload["lines"])
         let positionAt = number(payload, "positionAt")
         let elapsedSinceCapture = positionAt > 0 ? max(0, (Date().timeIntervalSince1970 * 1000 - positionAt) / 1000) : 0
@@ -97,8 +100,9 @@ final class LXLiveActivity: NSObject {
         baseTime = CACurrentMediaTime()
         isPlaying = nextPlaying
         playbackRate = nextRate
-        currentIndex = index(at: basePosition)
-        lastProgress = lineProgress(at: basePosition)
+        lyricOffset = nextLyricOffset
+        currentIndex = index(at: basePosition + lyricOffset)
+        lastProgress = lineProgress(at: basePosition + lyricOffset)
 
         if sameSong, let existing = activity {
             activity = existing
@@ -154,6 +158,9 @@ final class LXLiveActivity: NSObject {
         if payload["playbackRate"] != nil {
             playbackRate = max(0.1, number(payload, "playbackRate"))
         }
+        if payload["lyricOffset"] != nil {
+            lyricOffset = max(-5, min(5, number(payload, "lyricOffset")))
+        }
 
         if payload["position"] != nil {
             let position = max(0, number(payload, "position"))
@@ -204,8 +211,9 @@ final class LXLiveActivity: NSObject {
     private func tick() {
         guard isPlaying, activity != nil else { return }
         let elapsed = elapsedPosition()
-        let nextIndex = index(at: elapsed)
-        let nextProgress = lineProgress(at: elapsed)
+        let adjusted = max(0, elapsed + lyricOffset)
+        let nextIndex = index(at: adjusted)
+        let nextProgress = lineProgress(at: adjusted)
         guard nextIndex != currentIndex || abs(nextProgress - lastProgress) >= 0.015 else { return }
         currentIndex = nextIndex
         lastProgress = nextProgress
@@ -226,7 +234,8 @@ final class LXLiveActivity: NSObject {
     }
 
     private func makeState(at elapsed: Double) -> LXMusicActivityAttributes.ContentState {
-        let idx = index(at: elapsed)
+        let lyricTime = max(0, elapsed + lyricOffset)
+        let idx = index(at: lyricTime)
         let lyric = idx >= 0 && idx < lines.count ? lines[idx].text : ""
         let previousLyric = idx > 0 && idx - 1 < lines.count ? lines[idx - 1].text : ""
         let nextLyric = idx + 1 >= 0 && idx + 1 < lines.count ? lines[idx + 1].text : ""
@@ -244,7 +253,7 @@ final class LXLiveActivity: NSObject {
             duration: duration,
             playedColor: playedColor,
             unplayedColor: unplayedColor,
-            lineProgress: lineProgress(at: elapsed)
+            lineProgress: lineProgress(at: lyricTime)
         )
     }
 

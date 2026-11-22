@@ -123,7 +123,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
   if (self.displayView != nil) return;
   UIWindow *window = [self keyWindow];
   if (window == nil) return;
-  LXSampleBufferView *view = [[LXSampleBufferView alloc] initWithFrame:CGRectMake(0, window.bounds.size.height - 36.0, 320, 36)];
+  LXSampleBufferView *view = [[LXSampleBufferView alloc] initWithFrame:CGRectMake(0, window.bounds.size.height - 36.0, 160, 36)];
   view.alpha = 1.0;
   view.userInteractionEnabled = NO;
   view.clipsToBounds = YES;
@@ -152,7 +152,10 @@ RCT_EXPORT_MODULE(LXPipLyric)
 
 - (double)currentPosition {
   if (self.playing == NO) return self.basePosition;
-  return self.basePosition + (CACurrentMediaTime() - self.basePositionTime);
+  double position = self.basePosition + (CACurrentMediaTime() - self.basePositionTime);
+  id offsetValue = self.lyricState[@"offset"];
+  if ([offsetValue respondsToSelector:@selector(doubleValue)]) position += [offsetValue doubleValue];
+  return MAX(0, position);
 }
 
 - (NSInteger)currentLineIndexForPosition:(double)position {
@@ -251,7 +254,8 @@ RCT_EXPORT_MODULE(LXPipLyric)
   BOOL singleLine = [self.lyricState[@"singleLine"] boolValue];
   NSNumber *widthValue = self.lyricState[@"width"];
   CGFloat widthPercent = widthValue != nil ? MAX(10.0, MIN(100.0, widthValue.doubleValue)) : 100.0;
-  CGFloat width = 248.0 + (widthPercent / 100.0) * 148.0;
+  // 画中画歌词条只占旧版的一半宽度，避免横跨大半个屏幕。
+  CGFloat width = (248.0 + (widthPercent / 100.0) * 148.0) * 0.5;
   CGFloat height = singleLine ? 36.0 : 68.0;
   CGSize pointSize = CGSizeMake(width, height);
   if (self.displayView.superview != nil) {

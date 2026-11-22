@@ -89,6 +89,7 @@ xcrun simctl install "$device" "$app"
 capture_ui home build/ios-home.png
 capture_ui settings build/ios-settings.png
 capture_ui settings_detail build/ios-settings-detail.png
+capture_ui settings_lyric build/ios-settings-lyric.png
 SIMCTL_CHILD_LX_IOS_SMOKE=1 xcrun simctl launch --console "$device" "$bundle_id" > build/simulator-console.log 2>&1 &
 launch_pid=$!
 container=$(xcrun simctl get_app_container "$device" "$bundle_id" data)

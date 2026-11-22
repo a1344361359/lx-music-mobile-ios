@@ -182,10 +182,10 @@ export const runSmokeTests = async() => {
   const uiScreen = NativeModules.UtilsModule.uiSmokeScreen as string | undefined
   if (uiScreen) {
     // Dedicated UI snapshots: keep the screen stable so the runner can capture it.
-    if (uiScreen === 'settings_detail') {
+    if (uiScreen === 'settings_detail' || uiScreen === 'settings_lyric') {
       setNavActiveId('nav_setting')
       await pause(300)
-      global.app_event.iosSettingOpenDetail('basic')
+      global.app_event.iosSettingOpenDetail(uiScreen === 'settings_detail' ? 'basic' : 'lyric_desktop')
     } else {
       setNavActiveId(uiScreen === 'settings' ? 'nav_setting' : 'nav_songlist')
     }

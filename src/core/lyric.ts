@@ -48,8 +48,17 @@ const handleSetLyric = async(lyric: string, translation = '', romalrc = '') => {
  * @param time play time
  */
 export const handlePlay = (time: number) => {
-  lrcPlay(time)
-  void playDesktopLyric(time)
+  const offset = settingState.setting['desktopLyric.lyricOffset'] || 0
+  lrcPlay(time + offset)
+  void playDesktopLyric(time + offset)
+}
+
+/** Re-seek the lyric clock after the user changes the timing offset. */
+export const refreshLyricOffset = () => {
+  if (!playerState.isPlay) return
+  void getPosition().then(position => {
+    handlePlay(position * 1000)
+  })
 }
 
 /**

@@ -48,6 +48,7 @@ const defaultSetting: LX.AppSetting = {
   'desktopLyric.enable': false,
   'desktopLyric.isLock': false,
   'desktopLyric.width': 100,
+  'desktopLyric.lyricOffset': 0,
   'desktopLyric.maxLineNum': 5,
   'desktopLyric.isSingleLine': false,
   'desktopLyric.showToggleAnima': true,

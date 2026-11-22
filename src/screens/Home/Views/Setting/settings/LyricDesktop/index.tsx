@@ -26,7 +26,7 @@ export default memo(() => {
     <Section title={t('setting_lyric_desktop')}>
       {Platform.OS === 'ios' && (
         <Text size={12} color={theme['c-font-label']} style={{ paddingHorizontal: 15, paddingBottom: 8, lineHeight: 18 }}>
-          iOS 版在应用内显示悬浮歌词，点击歌词可打开播放详情；不支持跨 App 悬浮。
+          iOS 版开启后会启动系统画中画歌词，可浮在其他 App 上；画中画不可用时仍在应用内显示。若未弹出，可关闭再开启“显示歌词”。
         </Text>
       )}
       <IsShowLyric />

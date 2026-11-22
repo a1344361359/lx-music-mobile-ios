@@ -24,7 +24,11 @@ const fileInfo = (item: RNFS.ReadDirItem | RNFS.StatResult): FileType => ({
 export const getExternalStoragePaths = async(_isRemovable?: boolean) => [privateStorageDirectoryPath]
 export const stat = async(path: string) => fileInfo(await RNFS.stat(localPath(path)))
 export const selectManagedFolder = async(_isPersist = false) => stat(privateStorageDirectoryPath)
-export const selectFile = async(options: OpenDocumentOptions): Promise<{ data: string } | null> => NativeModules.LXDocumentPicker.openDocument(options)
+export const selectFile = async(options: OpenDocumentOptions): Promise<{ data: string } | null> => {
+  const picker = NativeModules.LXDocumentPicker ?? NativeModules.FilePickerModule
+  if (!picker?.openDocument) throw new Error('当前包未提供文件选择器模块')
+  return picker.openDocument(options)
+}
 export const removeManagedFolder = async(_path: string) => {}
 export const getManagedFolders = async() => [privateStorageDirectoryPath]
 export const getPersistedUriList = getManagedFolders

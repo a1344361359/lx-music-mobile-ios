@@ -20,6 +20,7 @@ export default () => {
   const progressRef = useRef(progress.nowPlayTime)
   const lastSeekRef = useRef(0)
   const [vttUri, setVttUri] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   progressRef.current = progress.nowPlayTime
 
@@ -45,7 +46,11 @@ export default () => {
   }, [enabled, lines])
 
   useEffect(() => {
-    if (!vttUri || !isPlay) {
+    setLoaded(false)
+  }, [vttUri])
+
+  useEffect(() => {
+    if (!vttUri || !isPlay || !loaded) {
       return
     }
     const timer = setTimeout(() => {
@@ -54,7 +59,7 @@ export default () => {
       } catch {}
     }, 600)
     return () => clearTimeout(timer)
-  }, [vttUri, isPlay])
+  }, [vttUri, isPlay, loaded])
 
   const source = useMemo(() => {
     if (!vttUri) return null
@@ -90,6 +95,7 @@ export default () => {
         mixWithOthers={MixWithOthersType.MIX}
         selectedTextTrack={{ type: SelectedTrackType.INDEX, value: 0 }}
         onLoad={() => {
+          setLoaded(true)
           if (progressRef.current > 0.5) videoRef.current?.seek(progressRef.current)
         }}
         onProgress={({ currentTime }) => {
@@ -100,7 +106,7 @@ export default () => {
             videoRef.current?.seek(target)
           }
         }}
-        onError={() => {}}
+        onError={() => { setLoaded(false) }}
       />
     </View>
   )

@@ -533,5 +533,5 @@
   "setting_play_show_live_activity": "靈動島即時歌詞",
   "setting_play_live_activity_played_color": "已播放歌詞顏色",
   "setting_play_live_activity_unplayed_color": "未播放歌詞顏色",
-  "setting_play_live_activity_color_tip": "套用於靈動島與鎖定畫面歌詞，輸入 #RRGGBB 可自訂顏色。"
+  "setting_play_live_activity_color_tip": "目前播放行、已播放行與未播放行都會使用這兩種顏色，輸入 #RRGGBB 可自訂。"
 }

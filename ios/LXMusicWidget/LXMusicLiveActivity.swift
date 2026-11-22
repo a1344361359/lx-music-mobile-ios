@@ -42,56 +42,77 @@ struct LXMusicLiveActivity: Widget {
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 7) {
-                        ArtworkView(urlString: context.state.artworkUrl, size: 30)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(context.state.title)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .lineLimit(1)
-                            Text(context.state.artist)
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.62))
-                                .lineLimit(1)
-                        }
-                    }
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    Image(systemName: context.state.isPlaying ? "waveform" : "pause.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(lxPlayedColor(context.state))
-                        .frame(width: 22)
-                }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        KaraokeText(
-                            text: context.state.lyric.isEmpty ? "歌词加载中…" : context.state.lyric,
-                            progress: context.state.lineProgress,
-                            playedColor: lxPlayedColor(context.state),
-                            unplayedColor: lxUnplayedColor(context.state),
-                            font: .system(size: 16, weight: .semibold)
-                        )
-                        if !context.state.nextLyric.isEmpty {
-                            Text(context.state.nextLyric)
-                                .font(.system(size: 12))
-                                .foregroundStyle(lxUnplayedColor(context.state).opacity(0.72))
-                                .lineLimit(1)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    DynamicLyricLines(
+                        previous: context.state.previousLyric,
+                        current: context.state.lyric,
+                        next: context.state.nextLyric,
+                        next2: context.state.nextLyric2,
+                        playedColor: lxPlayedColor(context.state),
+                        unplayedColor: lxUnplayedColor(context.state),
+                        activeSize: 15,
+                        inactiveSize: 12
+                    )
+                    .padding(.horizontal, 2)
                 }
             } compactLeading: {
-                ArtworkView(urlString: context.state.artworkUrl, size: 20)
+                CompactLyricText(
+                    text: context.state.lyric.isEmpty ? context.state.title : context.state.lyric,
+                    color: lxPlayedColor(context.state)
+                )
             } compactTrailing: {
-                Image(systemName: context.state.isPlaying ? "waveform" : "pause.fill")
-                    .foregroundStyle(lxPlayedColor(context.state))
+                ArtworkView(urlString: context.state.artworkUrl, size: 22)
             } minimal: {
-                Image(systemName: "music.note")
-                    .foregroundStyle(lxPlayedColor(context.state))
+                ArtworkView(urlString: context.state.artworkUrl, size: 18)
             }
             .keylineTint(lxPlayedColor(context.state))
         }
+    }
+}
+
+@available(iOS 16.1, *)
+private struct DynamicLyricLines: View {
+    let previous: String
+    let current: String
+    let next: String
+    let next2: String
+    let playedColor: Color
+    let unplayedColor: Color
+    let activeSize: CGFloat
+    let inactiveSize: CGFloat
+
+    var body: some View {
+        VStack(spacing: 2) {
+            lyricLine(previous, size: inactiveSize, weight: .regular, color: playedColor.opacity(0.46))
+            lyricLine(current.isEmpty ? "歌词加载中…" : current, size: activeSize, weight: .semibold, color: playedColor)
+            lyricLine(next, size: inactiveSize, weight: .regular, color: unplayedColor.opacity(0.68))
+            lyricLine(next2, size: inactiveSize - 1, weight: .regular, color: unplayedColor.opacity(0.42))
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private func lyricLine(_ text: String, size: CGFloat, weight: Font.Weight, color: Color) -> some View {
+        Text(text.isEmpty ? " " : text)
+            .font(.system(size: size, weight: weight))
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.62)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
+private struct CompactLyricText: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.55)
+            .frame(maxWidth: 112, alignment: .leading)
     }
 }
 
@@ -102,46 +123,36 @@ private struct LockScreenView: View {
     var body: some View {
         let played = Color(lxHex: state.playedColor, fallback: lxAccent)
         let unplayed = Color(lxHex: state.unplayedColor, fallback: .white)
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                ArtworkView(urlString: state.artworkUrl, size: 44)
+                ArtworkView(urlString: state.artworkUrl, size: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(state.title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     Text(state.artist)
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.62))
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: state.isPlaying ? "waveform" : "pause.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(played)
             }
 
-            if !state.previousLyric.isEmpty {
-                Text(state.previousLyric)
-                    .font(.system(size: 12))
-                    .foregroundStyle(played.opacity(0.48))
-                    .lineLimit(1)
-            }
-
-            KaraokeText(
-                text: state.lyric.isEmpty ? "歌词加载中…" : state.lyric,
-                progress: state.lineProgress,
+            DynamicLyricLines(
+                previous: state.previousLyric,
+                current: state.lyric,
+                next: state.nextLyric,
+                next2: state.nextLyric2,
                 playedColor: played,
                 unplayedColor: unplayed,
-                font: .system(size: 20, weight: .semibold)
+                activeSize: 17,
+                inactiveSize: 12
             )
-
-            if !state.nextLyric.isEmpty {
-                Text(state.nextLyric)
-                    .font(.system(size: 13))
-                    .foregroundStyle(unplayed.opacity(0.65))
-                    .lineLimit(1)
-            }
+            .padding(.vertical, 2)
 
             if state.duration > 0 {
                 ProgressView(value: max(0, min(state.elapsed, state.duration)), total: state.duration)
@@ -162,37 +173,6 @@ private struct LockScreenView: View {
         guard seconds.isFinite, seconds >= 0 else { return "00:00" }
         let total = Int(seconds.rounded())
         return String(format: "%02d:%02d", total / 60, total % 60)
-    }
-}
-
-private struct KaraokeText: View {
-    let text: String
-    let progress: Double
-    let playedColor: Color
-    let unplayedColor: Color
-    let font: Font
-
-    var body: some View {
-        Text(text)
-            .font(font)
-            .lineLimit(1)
-            .minimumScaleFactor(0.72)
-            .foregroundStyle(
-                LinearGradient(
-                    stops: [
-                        .init(color: playedColor, location: 0),
-                        .init(color: playedColor, location: progressValue),
-                        .init(color: unplayedColor, location: progressValue),
-                        .init(color: unplayedColor, location: 1),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-    }
-
-    private var progressValue: CGFloat {
-        CGFloat(min(max(progress, 0), 1))
     }
 }
 

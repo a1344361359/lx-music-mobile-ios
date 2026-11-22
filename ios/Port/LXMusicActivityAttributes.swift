@@ -10,6 +10,7 @@ struct LXMusicActivityAttributes: ActivityAttributes {
         var lyric: String
         var previousLyric: String
         var nextLyric: String
+        var nextLyric2: String
         var isPlaying: Bool
         var elapsed: Double
         var duration: Double

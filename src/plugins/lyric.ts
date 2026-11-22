@@ -69,10 +69,12 @@ export const init = async() => {
 
 export type LiveLyricLine = { time: number, text: string }
 
-export const getLiveLyricLines = (): LiveLyricLine[] => lrcTools.currentLines.map(line => ({
-  time: line.time,
-  text: line.text,
-}))
+export const getLiveLyricLines = (): LiveLyricLine[] => lrcTools.currentLines
+  .filter(line => !!line.text?.trim())
+  .map(line => ({
+    time: line.time,
+    text: line.text,
+  }))
 
 export const addSetLyricHook = (hook: SetLyricHook) => {
   lrcTools.addSetLyricHook(hook)

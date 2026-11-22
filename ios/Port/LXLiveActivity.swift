@@ -81,6 +81,8 @@ final class LXLiveActivity: NSObject {
         let rawRate = number(payload, "playbackRate")
         let nextRate = rawRate > 0 ? rawRate : 1
         let nextLines = parseLines(payload["lines"])
+        let positionAt = number(payload, "positionAt")
+        let elapsedSinceCapture = positionAt > 0 ? max(0, (Date().timeIntervalSince1970 * 1000 - positionAt) / 1000) : 0
 
         let sameSong = activity?.attributes.songId == nextSongId && activity?.activityState == .active
         songId = nextSongId
@@ -91,23 +93,23 @@ final class LXLiveActivity: NSObject {
         unplayedColor = nextUnplayedColor
         duration = nextDuration
         lines = nextLines
-        basePosition = nextPosition
+        basePosition = nextPosition + (nextPlaying ? elapsedSinceCapture * nextRate : 0)
         baseTime = CACurrentMediaTime()
         isPlaying = nextPlaying
         playbackRate = nextRate
-        currentIndex = index(at: nextPosition)
-        lastProgress = lineProgress(at: nextPosition)
+        currentIndex = index(at: basePosition)
+        lastProgress = lineProgress(at: basePosition)
 
         if sameSong, let existing = activity {
             activity = existing
-            pushState(at: nextPosition)
+            pushState(at: basePosition)
             restartTimer()
             return
         }
 
         endExistingActivities()
         activity = nil
-        let state = makeState(at: nextPosition)
+        let state = makeState(at: basePosition)
         do {
             if #available(iOS 16.2, *) {
                 activity = try Activity.request(
@@ -130,11 +132,13 @@ final class LXLiveActivity: NSObject {
 
     private func updateOnMain(_ payload: NSDictionary) {
         guard activity != nil else { return }
+        let payloadSongId = string(payload, "songId")
+        if !payloadSongId.isEmpty && payloadSongId != songId { return }
 
-        if payload["position"] != nil {
-            basePosition = max(0, number(payload, "position"))
-            baseTime = CACurrentMediaTime()
-        }
+        let nextPlaying = bool(payload, "isPlaying")
+        let wasPlaying = isPlaying
+        isPlaying = nextPlaying
+
         if payload["duration"] != nil {
             duration = max(0, number(payload, "duration"))
         }
@@ -150,14 +154,17 @@ final class LXLiveActivity: NSObject {
         if payload["playbackRate"] != nil {
             playbackRate = max(0.1, number(payload, "playbackRate"))
         }
-        let nextPlaying = bool(payload, "isPlaying")
-        if isPlaying != nextPlaying {
-            isPlaying = nextPlaying
-            if nextPlaying {
-                basePosition = max(0, number(payload, "position"))
-                baseTime = CACurrentMediaTime()
-            }
+
+        if payload["position"] != nil {
+            let position = max(0, number(payload, "position"))
+            let positionAt = number(payload, "positionAt")
+            let elapsedSinceCapture = positionAt > 0 ? max(0, (Date().timeIntervalSince1970 * 1000 - positionAt) / 1000) : 0
+            basePosition = position + (nextPlaying ? elapsedSinceCapture * playbackRate : 0)
+            baseTime = CACurrentMediaTime()
+        } else if !wasPlaying && nextPlaying {
+            baseTime = CACurrentMediaTime()
         }
+
         pushState(at: elapsedPosition())
         restartTimer()
     }
@@ -177,7 +184,7 @@ final class LXLiveActivity: NSObject {
         stopTimer()
         guard isPlaying, activity != nil else { return }
         let source = DispatchSource.makeTimerSource(queue: .main)
-        source.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(180))
+        source.schedule(deadline: .now() + 0.5, repeating: 0.5, leeway: .milliseconds(120))
         source.setEventHandler { [weak self] in
             self?.tick()
         }
@@ -223,6 +230,7 @@ final class LXLiveActivity: NSObject {
         let lyric = idx >= 0 && idx < lines.count ? lines[idx].text : ""
         let previousLyric = idx > 0 && idx - 1 < lines.count ? lines[idx - 1].text : ""
         let nextLyric = idx + 1 >= 0 && idx + 1 < lines.count ? lines[idx + 1].text : ""
+        let nextLyric2 = idx + 2 >= 0 && idx + 2 < lines.count ? lines[idx + 2].text : ""
         return LXMusicActivityAttributes.ContentState(
             title: title,
             artist: artist,
@@ -230,6 +238,7 @@ final class LXLiveActivity: NSObject {
             lyric: lyric,
             previousLyric: previousLyric,
             nextLyric: nextLyric,
+            nextLyric2: nextLyric2,
             isPlaying: isPlaying,
             elapsed: max(0, elapsed),
             duration: duration,

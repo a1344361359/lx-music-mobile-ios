@@ -17,8 +17,7 @@ const isEnabled = () => {
     !!settingState.setting['player.isShowLiveActivity']
 }
 
-const buildPayload = () => {
-  const music = playerState.musicInfo
+const buildPayload = (music = playerState.musicInfo) => {
   if (!music.id) return null
   return {
     songId: String(music.id),
@@ -27,6 +26,7 @@ const buildPayload = () => {
     artworkUrl: music.pic ?? '',
     duration: Math.max(0, playerState.progress.maxPlayTime || 0),
     position: Math.max(0, playerState.progress.nowPlayTime || 0),
+    positionAt: Date.now(),
     isPlaying: !!playerState.isPlay,
     playbackRate: settingState.setting['player.playbackRate'] || 1,
     playedColor: normalizeHexColor(settingState.setting['player.liveActivityLyricPlayedColor'], '#31C27C'),
@@ -35,12 +35,12 @@ const buildPayload = () => {
   }
 }
 
-export const syncLiveActivity = (force = false) => {
+export const syncLiveActivity = (force = false, musicInfo = playerState.musicInfo) => {
   if (!isEnabled()) {
     if (lastSongId) endLiveActivity()
     return
   }
-  const payload = buildPayload()
+  const payload = buildPayload(musicInfo)
   if (!payload) {
     if (lastSongId) endLiveActivity()
     return
@@ -71,7 +71,9 @@ export const updateLiveActivityPlayback = (isPlaying?: boolean, position?: numbe
   lastPosition = nextPosition
   lastPositionAt = now
   native?.update?.({
+    songId: lastSongId,
     position: nextPosition,
+    positionAt: now,
     duration: Math.max(0, playerState.progress.maxPlayTime || 0),
     isPlaying: isPlaying ?? !!playerState.isPlay,
   })

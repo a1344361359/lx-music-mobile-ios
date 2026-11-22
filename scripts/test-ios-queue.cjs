@@ -54,6 +54,7 @@ test('switching songs keeps iOS native and application queues aligned', async() 
     '@/config': { defaultUrl: 'silence.mp3' },
     '@/store/setting/state': { setting: {} },
     '@/store/player/state': { musicInfo: {} },
+    '@/core/liveActivity': { syncLiveActivity() {} },
   }, { global: { lx: { restorePlayInfo: null } }, Math, Promise })
   for (let i = 0; i < 4; i++) {
     const music = { id: 'song-' + i, name: 'Fixture', singer: 'CI', meta: {} }

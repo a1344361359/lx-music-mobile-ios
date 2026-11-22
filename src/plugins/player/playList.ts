@@ -5,6 +5,7 @@ import { defaultUrl } from '@/config'
 // import { action as playerAction } from '@/store/modules/player'
 import settingState from '@/store/setting/state'
 import playerState from '@/store/player/state'
+import { syncLiveActivity } from '@/core/liveActivity'
 
 
 const list: LX.Player.Track[] = []
@@ -218,6 +219,8 @@ const updateMetaInfo = async(mInfo: LX.Player.MusicInfo) => {
   // }
   // console.log('+++++updateMetaInfo+++++', mInfo.name)
   state.isPlaying = await TrackPlayer.getState() == State.Playing
+  // 等待原生播放器状态期间可能已经切歌，旧歌的元数据不能再覆盖新歌的锁屏信息。
+  if (playerState.musicInfo?.id !== mInfo.id) return
   let artwork = isShowNotificationImage ? mInfo.pic ?? prevArtwork : undefined
   if (mInfo.pic) prevArtwork = mInfo.pic
   // 锁屏 / 通知栏 / 灵动岛始终显示歌曲名和歌手，
@@ -232,6 +235,10 @@ const updateMetaInfo = async(mInfo: LX.Player.MusicInfo) => {
     duration: state.prevDuration || 0,
     lyric: getCurrentFullLyric(mInfo.id),
   }, state.isPlaying)
+
+  // 锁屏已经更新成这首歌之后，再让灵动岛使用同一份 mInfo 同步一次，
+  // 避免两处更新来源不同导致“当前歌曲”和锁屏歌曲对不上。
+  if (Platform.OS === 'ios' && playerState.musicInfo?.id === mInfo.id) syncLiveActivity(true, mInfo)
 }
 
 

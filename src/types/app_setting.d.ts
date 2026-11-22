@@ -82,6 +82,11 @@ declare global {
       'theme.id': string
 
       /**
+       * KMusic 界面强调色
+       */
+      'theme.kmusicAccentColor': string
+
+      /**
        * 亮色主题id
        */
       'theme.lightId': string

@@ -18,7 +18,6 @@ const NAV_WIDTH = 84
 const styles = createStyle({
   container: {
     flexGrow: 0,
-    backgroundColor: '#0B0B0E',
     // flex: 1,
     // alignItems: 'center',
     // justifyContent: 'center',

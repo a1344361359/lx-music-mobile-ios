@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { getUserTheme, saveUserTheme } from '@/utils/data'
 import themes from '@/theme/themes/themes'
-import kmusicTheme from '@/theme/themes/kmusic'
+import kmusicTheme, { hexToRgba, kmusicLightTheme, makeKMusicTheme } from '@/theme/themes/kmusic'
 import settingState from '@/store/setting/state'
 import themeState from '@/store/theme/state'
 import { isUrl } from '@/utils'
 import { privateStorageDirectoryPath } from '@/utils/fs'
 import { type ImageSourcePropType } from 'react-native'
 
-const allThemes = [...themes, kmusicTheme] as LX.Theme[]
+const allThemes = [...themes, kmusicTheme, kmusicLightTheme] as LX.Theme[]
 
 export const BG_IMAGES = {
   'china_ink.jpg': require('./images/china_ink.jpg') as ImageSourcePropType,
@@ -97,17 +97,19 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
     'c-border-background': theme.config.themeColors['c-primary-light-100-alpha-700'],
     'bg-image': bgImg,
   } as const
-  if (theme.id === 'kmusic') {
+  if (theme.id === 'kmusic' || theme.id === 'kmusic_light') {
+    const isDark = theme.isDark
+    const accent = settingState.setting['theme.kmusicAccentColor']
     return {
       ...active,
-      'c-app-background': 'rgb(8, 8, 10)',
-      'c-main-background': 'rgb(12, 12, 16)',
-      'c-content-background': 'rgb(17, 17, 21)',
-      'c-border-background': 'rgba(255, 255, 255, 0.08)',
-      'c-font': 'rgb(245, 245, 247)',
-      'c-font-label': 'rgb(142, 142, 147)',
-      'c-primary-background': 'rgba(255, 59, 48, 0.16)',
-      'c-primary-background-active': 'rgba(255, 59, 48, 0.26)',
+      'c-app-background': isDark ? 'rgb(8, 8, 10)' : 'rgb(245, 245, 247)',
+      'c-main-background': isDark ? 'rgb(12, 12, 16)' : 'rgb(242, 242, 245)',
+      'c-content-background': isDark ? 'rgb(17, 17, 21)' : 'rgb(255, 255, 255)',
+      'c-border-background': isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+      'c-font': isDark ? 'rgb(245, 245, 247)' : 'rgb(28, 28, 30)',
+      'c-font-label': isDark ? 'rgb(142, 142, 147)' : 'rgb(110, 110, 115)',
+      'c-primary-background': hexToRgba(accent, isDark ? 0.16 : 0.12),
+      'c-primary-background-active': hexToRgba(accent, isDark ? 0.26 : 0.2),
     } as const
   }
   return active
@@ -150,5 +152,8 @@ export const getTheme = async() => {
     }
   }
 
+  if (theme && (theme.id === 'kmusic' || theme.id === 'kmusic_light')) {
+    theme = makeKMusicTheme(theme.id, settingState.setting['theme.kmusicAccentColor'])
+  }
   return theme as LX.Theme
 }

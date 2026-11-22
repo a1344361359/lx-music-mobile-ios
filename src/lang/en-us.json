@@ -538,5 +538,7 @@
   "songlist_platform_import_title": "Import platform playlist",
   "songlist_platform_import_loading": "Parsing...",
   "songlist_platform_import_btn": "Parse & import",
-  "setting_platform_auth": "Platform credentials"
+  "setting_platform_auth": "Platform credentials",
+  "theme_kmusic": "KMusic Dark",
+  "theme_kmusic_light": "KMusic Light"
 }

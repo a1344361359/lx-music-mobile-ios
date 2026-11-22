@@ -538,5 +538,7 @@
   "songlist_platform_import_title": "导入平台歌单",
   "songlist_platform_import_loading": "解析中...",
   "songlist_platform_import_btn": "解析并导入",
-  "setting_platform_auth": "平台凭证"
+  "setting_platform_auth": "平台凭证",
+  "theme_kmusic": "KMusic 深色",
+  "theme_kmusic_light": "KMusic 浅色"
 }

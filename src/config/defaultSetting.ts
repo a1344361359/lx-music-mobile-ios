@@ -77,6 +77,7 @@ const defaultSetting: LX.AppSetting = {
 
   // 'theme.id': 'blue_plus',
   'theme.id': 'kmusic',
+  'theme.kmusicAccentColor': '#FF3B30',
   'theme.lightId': 'kmusic',
   'theme.darkId': 'kmusic',
   'theme.hideBgDark': false,

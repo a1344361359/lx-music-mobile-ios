@@ -1,15 +1,30 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import TrackPlayer, { State as TPState, Event as TPEvent } from '@/plugins/player/trackPlayer'
-import { Platform } from 'react-native'
+import { AppState, Platform } from 'react-native'
 // import { store } from '@/store'
 // import { action as playerAction, STATUS } from '@/store/modules/player'
 import { isTempId, isEmpty } from './utils'
 // import { play as lrcPlay, pause as lrcPause } from '@/core/lyric'
 import { exitApp } from '@/core/common'
 import { getCurrentTrackId } from './playList'
+import playerState from '@/store/player/state'
+import { setBackgroundAudioPlaying } from '@/utils/nativeModules/backgroundAudio'
 import { pause, play, playNext, playPrev } from '@/core/player/player'
 
 let isInitialized = false
+let lastAutoResumeAt = 0
+
+// 某些系统/耳机在后台会错误地暂停 RNTP；只要用户没有主动暂停，就在短暂延迟后恢复。
+const tryResumeBackgroundPlayback = async() => {
+  if (Platform.OS !== 'ios' || AppState.currentState === 'active') return
+  if (!playerState.isPlay) return
+  const now = Date.now()
+  if (now - lastAutoResumeAt < 2000) return
+  lastAutoResumeAt = now
+  setTimeout(() => {
+    if (AppState.currentState !== 'active') void TrackPlayer.play()
+  }, 350)
+}
 
 // let retryTrack: LX.Player.Track | null = null
 // let retryGetUrlId: string | null = null
@@ -87,11 +102,18 @@ const registerPlaybackService = async() => {
         break
       case TPState.Ready:
       case TPState.Stopped:
+        setBackgroundAudioPlaying(false)
+        global.app_event.playerPause()
+        global.app_event.pause()
+        break
       case TPState.Paused:
+        if (playerState.isPlay) void tryResumeBackgroundPlayback()
+        else setBackgroundAudioPlaying(false)
         global.app_event.playerPause()
         global.app_event.pause()
         break
       case TPState.Playing:
+        setBackgroundAudioPlaying(true)
         global.app_event.playerPlaying()
         global.app_event.play()
         break
@@ -108,7 +130,7 @@ const registerPlaybackService = async() => {
     }
     if (global.lx.isPlayedStop) return handleExitApp('Timeout Exit')
 
-    // console.log('currentIsPlaying', currentIsPlaying, global.lx.playInfo.isPlaying)
+    // console.log('currentIsPlaying', currentIsPlaying, playerState.isPlay)
     // void updateMetaData(global.lx.store_playMusicInfo.musicInfo, currentIsPlaying)
   })
   TrackPlayer.addEventListener(TPEvent.PlaybackTrackChanged, async info => {

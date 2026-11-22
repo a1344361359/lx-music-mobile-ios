@@ -2,7 +2,7 @@ import '@/utils/errorHandle'
 import { init as initLog } from '@/utils/log'
 import { bootLog, getBootLog } from '@/utils/bootLog'
 import '@/config/globalData'
-import { getFontSize } from '@/utils/data'
+import { getFontSize, saveFontSize } from '@/utils/data'
 import { exitApp } from './utils/nativeModules/utils'
 import { windowSizeTools } from './utils/windowSizeTools'
 import { listenLaunchEvent } from './navigation/regLaunchedEvent'
@@ -13,7 +13,10 @@ console.log('starting app...')
 listenLaunchEvent()
 
 void Promise.all([getFontSize(), windowSizeTools.init()]).then(async([fontSize]) => {
-  global.lx.fontSize = fontSize
+  // 迁移旧版过大的字号档位；正常手机视觉下 1.0~1.2 足够。
+  const normalizedFontSize = fontSize > 1.2 ? 1.1 : fontSize
+  global.lx.fontSize = normalizedFontSize
+  if (normalizedFontSize !== fontSize) void saveFontSize(normalizedFontSize)
   bootLog('Font size setting loaded.')
 
   let isInited = false

@@ -1,113 +1,84 @@
-import RNFS from 'react-native-fs'
-import Video, { IgnoreSilentSwitchType, MixWithOthersType, SelectedTrackType, TextTrackType, type VideoRef } from 'react-native-video'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Platform, View } from 'react-native'
-import { buildPipLyricVtt } from '@/core/pipLyric'
+import { useEffect, useRef } from 'react'
+import { AppState, NativeModules, Platform } from 'react-native'
 import { useLrcSet } from '@/plugins/lyric'
 import { useIsPlay, useProgress } from '@/store/player/hook'
 import { useSettingValue } from '@/store/setting/hook'
 
-// A long, tiny black H.264 clip is used as the PiP media surface. Lyrics are
-// supplied as a local WebVTT text track, which AVPlayer composites in PiP.
-const BLACK_VIDEO = require('@/resources/black-pip.mp4')
+const { LXPipLyric } = NativeModules
 
+interface PipState {
+  lines: Array<{ text: string, time: number }>
+  position: number
+  isPlaying: boolean
+  singleLine: boolean
+  width: number
+  fontSize: number
+  playedColor: string
+  unplayedColor: string
+}
+
+// QQ 音乐式的系统画中画歌词：由原生 AVSampleBufferDisplayLayer 渲染，
+// 不再使用 react-native-video 的黑色视频 + WebVTT 方案。
 export default () => {
   const enabled = useSettingValue('desktopLyric.enable')
   const lines = useLrcSet()
   const isPlay = useIsPlay()
   const progress = useProgress()
-  const videoRef = useRef<VideoRef>(null)
-  const progressRef = useRef(progress.nowPlayTime)
-  const lastSeekRef = useRef(0)
-  const [vttUri, setVttUri] = useState<string | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const singleLine = useSettingValue('desktopLyric.isSingleLine')
+  const width = useSettingValue('desktopLyric.width')
+  const fontSize = useSettingValue('desktopLyric.style.fontSize')
+  const playedColor = useSettingValue('desktopLyric.style.lyricPlayedColor')
+  const unplayedColor = useSettingValue('desktopLyric.style.lyricUnplayColor')
+  const configuredRef = useRef(false)
 
-  progressRef.current = progress.nowPlayTime
-
-  useEffect(() => {
-    if (Platform.OS !== 'ios' || !enabled || !lines.length) {
-      setVttUri(null)
-      return
-    }
-    const vtt = buildPipLyricVtt(lines)
-    if (vtt === 'WEBVTT\n\n') {
-      setVttUri(null)
-      return
-    }
-
-    let cancelled = false
-    const path = `${RNFS.DocumentDirectoryPath}/lx-pip-lyrics-${Date.now()}.vtt`
-    RNFS.writeFile(path, vtt, 'utf8').then(() => {
-      if (!cancelled) setVttUri(`file://${path}`)
-    }).catch(() => {
-      if (!cancelled) setVttUri(null)
-    })
-    return () => { cancelled = true }
-  }, [enabled, lines])
+  const buildState = (): PipState => ({
+    lines: (lines as any[]).filter(line => line.text).map(line => ({
+      text: line.text,
+      time: line.time / 1000,
+    })),
+    position: progress.nowPlayTime,
+    isPlaying: isPlay,
+    singleLine,
+    width,
+    fontSize,
+    playedColor,
+    unplayedColor,
+  })
 
   useEffect(() => {
-    setLoaded(false)
-  }, [vttUri])
-
-  useEffect(() => {
-    if (!vttUri || !isPlay || !loaded) {
+    if (Platform.OS !== 'ios' || !LXPipLyric) return
+    if (!enabled) {
+      configuredRef.current = false
+      void LXPipLyric.teardown()
       return
     }
-    const timer = setTimeout(() => {
-      try {
-        videoRef.current?.enterPictureInPicture()
-      } catch {}
-    }, 600)
-    return () => clearTimeout(timer)
-  }, [vttUri, isPlay, loaded])
-
-  const source = useMemo(() => {
-    if (!vttUri) return null
-    return {
-      uri: BLACK_VIDEO,
-      startPosition: Math.max(0, progressRef.current * 1000),
-      textTracks: [{
-        title: '歌词',
-        language: 'zh' as const,
-        type: TextTrackType.VTT,
-        uri: vttUri,
-      }],
+    const state = buildState()
+    if (!configuredRef.current) {
+      configuredRef.current = true
+      void LXPipLyric.configure(state)
+    } else {
+      void LXPipLyric.update(state)
     }
-  }, [vttUri])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, lines, isPlay, progress.nowPlayTime, singleLine, width, fontSize, playedColor, unplayedColor])
 
-  if (Platform.OS !== 'ios' || !source) return null
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !LXPipLyric) return
+    const onAppState = (next: string) => {
+      if (!enabled) return
+      if (next === 'background') void LXPipLyric.start()
+    }
+    const sub = AppState.addEventListener('change', onAppState)
+    return () => sub.remove()
+  }, [enabled])
 
-  return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width: 640, height: 360, opacity: 0.01 }}>
-      <Video
-        ref={videoRef}
-        source={source}
-        style={{ width: 640, height: 360 }}
-        paused={!isPlay}
-        muted
-        volume={0}
-        resizeMode="contain"
-        repeat={false}
-        playInBackground
-        playWhenInactive
-        enterPictureInPictureOnLeave
-        ignoreSilentSwitch={IgnoreSilentSwitchType.IGNORE}
-        mixWithOthers={MixWithOthersType.MIX}
-        selectedTextTrack={{ type: SelectedTrackType.INDEX, value: 0 }}
-        onLoad={() => {
-          setLoaded(true)
-          if (progressRef.current > 0.5) videoRef.current?.seek(progressRef.current)
-        }}
-        onProgress={({ currentTime }) => {
-          const target = progressRef.current
-          const now = Date.now()
-          if (Math.abs(currentTime - target) > 1.5 && now - lastSeekRef.current > 1500) {
-            lastSeekRef.current = now
-            videoRef.current?.seek(target)
-          }
-        }}
-        onError={() => { setLoaded(false) }}
-      />
-    </View>
-  )
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !LXPipLyric) return
+    return () => {
+      configuredRef.current = false
+      void LXPipLyric.teardown()
+    }
+  }, [])
+
+  return null
 }

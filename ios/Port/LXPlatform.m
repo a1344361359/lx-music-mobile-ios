@@ -96,33 +96,106 @@ RCT_EXPORT_METHOD(clearAppCache:(RCTPromiseResolveBlock)resolve rejecter:(RCTPro
 @interface LXDocumentPicker : NSObject <RCTBridgeModule, UIDocumentPickerDelegate>
 @property(nonatomic, copy) RCTPromiseResolveBlock pendingResolve;
 @property(nonatomic, copy) RCTPromiseRejectBlock pendingReject;
+@property(nonatomic, weak) UIDocumentPickerViewController *activePicker;
 @end
 @implementation LXDocumentPicker
 RCT_EXPORT_MODULE();
 + (BOOL)requiresMainQueueSetup { return YES; }
 - (dispatch_queue_t)methodQueue { return dispatch_get_main_queue(); }
-RCT_EXPORT_METHOD(openDocument:(NSDictionary *)options resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
-  if (self.pendingResolve) { reject(@"PICKER_BUSY",@"A document picker is already open",nil); return; }
-  self.pendingResolve = resolve; self.pendingReject = reject;
-  UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[UTTypeItem] asCopy:YES];
-  picker.delegate = self; picker.allowsMultipleSelection = NO;
-  [RCTPresentedViewController() presentViewController:picker animated:YES completion:nil];
+
+- (void)clearPending {
+  self.pendingResolve = nil;
+  self.pendingReject = nil;
+  self.activePicker = nil;
 }
+
+- (void)rejectPending:(NSString *)code message:(NSString *)message {
+  if (self.pendingReject) self.pendingReject(code, message, nil);
+  [self clearPending];
+}
+
+RCT_EXPORT_METHOD(openDocument:(NSDictionary *)options resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+  if (self.pendingResolve) {
+    reject(@"PICKER_BUSY", @"A document picker is already open", nil);
+    return;
+  }
+  self.pendingResolve = resolve;
+  self.pendingReject = reject;
+
+  // Wait for any React Native modal presentation transition to settle first.
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    if (!self.pendingResolve) return;
+
+    UIDocumentPickerViewController *picker;
+    if (@available(iOS 14.0, *)) {
+      // public.data covers source-code and text files such as .js, while excluding folders.
+      picker = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[UTTypeData] asCopy:YES];
+    } else {
+      picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:@[@"public.data"] inMode:UIDocumentPickerModeImport];
+    }
+    picker.delegate = self;
+    picker.allowsMultipleSelection = NO;
+    self.activePicker = picker;
+
+    UIViewController *presenter = RCTPresentedViewController();
+    while (presenter.presentedViewController && !presenter.presentedViewController.isBeingDismissed) {
+      presenter = presenter.presentedViewController;
+    }
+    if (!presenter || presenter.isBeingDismissed) {
+      [self rejectPending:@"PICKER_PRESENT" message:@"No view controller is available to present the document picker"];
+      return;
+    }
+
+    [presenter presentViewController:picker animated:YES completion:^{
+      // Detect a silent presentation failure so the JS layer can fall back immediately.
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (!self.pendingResolve || !self.activePicker) return;
+        if (presenter.presentedViewController != picker) {
+          [self rejectPending:@"PICKER_PRESENT" message:@"The document picker did not become visible"];
+        }
+      });
+    }];
+  });
+}
+
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
   NSURL *url = urls.firstObject;
+  if (!url || !self.pendingResolve) {
+    if (self.pendingResolve) self.pendingResolve(nil);
+    [self clearPending];
+    return;
+  }
+
+  // asCopy:YES has already copied the selected document into the app container,
+  // so return that path directly instead of copying it a second time.
+  NSString *path = url.path;
   BOOL scoped = [url startAccessingSecurityScopedResource];
-  NSString *folder = [NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
-  NSError *error = nil;
-  [NSFileManager.defaultManager createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:nil error:&error];
-  NSString *destination = [folder stringByAppendingPathComponent:url.lastPathComponent];
-  if (!error) [NSFileManager.defaultManager copyItemAtURL:url toURL:[NSURL fileURLWithPath:destination] error:&error];
+  BOOL readable = path.length > 0 && [NSFileManager.defaultManager isReadableFileAtPath:path];
   if (scoped) [url stopAccessingSecurityScopedResource];
-  if (error) self.pendingReject(@"DOCUMENT_IMPORT",error.localizedDescription,error);
-  else self.pendingResolve(@{@"data":destination});
-  self.pendingResolve = nil; self.pendingReject = nil;
+
+  if (!readable) {
+    // Fallback for providers that ignore asCopy: handle the security-scoped URL ourselves.
+    BOOL access = [url startAccessingSecurityScopedResource];
+    NSString *folder = [NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
+    NSError *error = nil;
+    [NSFileManager.defaultManager createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:nil error:&error];
+    NSString *destination = [folder stringByAppendingPathComponent:url.lastPathComponent ?: @"document"];
+    if (!error) [NSFileManager.defaultManager copyItemAtURL:url toURL:[NSURL fileURLWithPath:destination] error:&error];
+    if (access) [url stopAccessingSecurityScopedResource];
+    if (error) {
+      if (self.pendingReject) self.pendingReject(@"DOCUMENT_IMPORT", error.localizedDescription, error);
+      [self clearPending];
+      return;
+    }
+    path = destination;
+  }
+
+  if (self.pendingResolve) self.pendingResolve(@{@"data": path});
+  [self clearPending];
 }
+
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
   if (self.pendingResolve) self.pendingResolve(nil);
-  self.pendingResolve = nil; self.pendingReject = nil;
+  [self clearPending];
 }
 @end

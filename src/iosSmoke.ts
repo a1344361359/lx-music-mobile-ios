@@ -192,6 +192,9 @@ export const runSmokeTests = async() => {
     const cipher = await crypto.rsaEncrypt(input, pair.publicKey, 'RSA/ECB/OAEPWithSHA1AndMGF1Padding')
     assert(await crypto.rsaDecrypt(cipher, pair.privateKey, 'RSA/ECB/OAEPWithSHA1AndMGF1Padding') === text, 'Native RSA round-trip failed')
     checks.push('native AES/RSA bridge')
+    const documentPicker = NativeModules.LXDocumentPicker
+    assert(documentPicker && typeof documentPicker.openDocument === 'function', 'LXDocumentPicker native module is missing')
+    checks.push('native document picker module registered')
 
     const path = RNFS.CachesDirectoryPath + '/ios-smoke-fixture'
     await writeFile(path, text)

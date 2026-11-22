@@ -1,4 +1,5 @@
 import { useState, useRef, forwardRef, useImperativeHandle } from 'react'
+import { Platform } from 'react-native'
 // import { StyleSheet, View, Text, StatusBar, ScrollView } from 'react-native'
 
 // import { useGetter, useDispatch } from '@/store'
@@ -52,7 +53,11 @@ export default forwardRef<ChoosePathType, ChoosePathProps>(({
 
   useImperativeHandle(ref, () => ({
     show(options) {
-      if (!settingState.setting['common.useSystemFileSelector'] || options.dirOnly) {
+      // On iOS the native document picker is the only way to reach files outside
+      // the app sandbox, so always try it first even if a previous failure had
+      // switched the setting to the built-in browser.
+      const useSystemFileSelector = Platform.OS === 'ios' || settingState.setting['common.useSystemFileSelector']
+      if (!useSystemFileSelector || options.dirOnly) {
         // if (options.isPersist) {
         void handleOpenExternalStorage(options)
         // } else {

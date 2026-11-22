@@ -1,6 +1,8 @@
+import { Platform } from 'react-native'
 import { useHorizontalMode } from '@/utils/hooks'
 import Vertical from './Vertical'
 import Horizontal from './Horizontal'
+import IOS from './IOS'
 import { useBackHandler } from '@/utils/hooks/useBackHandler'
 import { useCallback } from 'react'
 // import { AppColors } from '@/theme'
@@ -19,6 +21,7 @@ export default () => {
     return false
   }, []))
 
+  if (Platform.OS === 'ios' && !isHorizontalMode) return <IOS />
   return isHorizontalMode
     ? <Horizontal />
     : <Vertical />

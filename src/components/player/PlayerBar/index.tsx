@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import { View } from 'react-native'
+import { Platform, View } from 'react-native'
 import { useKeyboard } from '@/utils/hooks'
 
 import Pic from './components/Pic'
@@ -48,15 +48,16 @@ const styles = createStyle({
     // marginTop: -progressContentPadding,
     // backgroundColor: 'rgba(0, 0, 0, .1)',
     // borderTopWidth: BorderWidths.normal2,
-    paddingVertical: 9,
-    paddingLeft: 10,
-    paddingRight: 8,
-    marginHorizontal: 8,
-    marginBottom: 8,
-    borderWidth: 1,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 9,
+    paddingLeft: Platform.OS === 'ios' ? 12 : 10,
+    paddingRight: Platform.OS === 'ios' ? 10 : 8,
+    marginHorizontal: Platform.OS === 'ios' ? 0 : 8,
+    marginBottom: Platform.OS === 'ios' ? 0 : 8,
+    borderWidth: Platform.OS === 'ios' ? 0 : 1,
+    borderTopWidth: Platform.OS === 'ios' ? 0.5 : 1,
     // backgroundColor: AppColors.primary,
     // backgroundColor: 'red',
-    borderRadius: 14,
+    borderRadius: Platform.OS === 'ios' ? 0 : 14,
     flexDirection: 'row',
     alignItems: 'center',
     elevation: 10,

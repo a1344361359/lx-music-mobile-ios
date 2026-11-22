@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { Platform } from 'react-native'
 // import { getWindowSise, onDimensionChange } from '@/utils/tools'
 import DrawerNav from './DrawerNav'
 import Header from './Header'
@@ -7,12 +8,16 @@ import { useSettingValue } from '@/store/setting/hook'
 import { COMPONENT_IDS } from '@/config/constant'
 import DrawerLayoutFixed, { type DrawerLayoutFixedType } from '@/components/common/DrawerLayoutFixed'
 import { scaleSizeW } from '@/utils/pixelRatio'
+import { useNavActiveId } from '@/store/common/hook'
+import StatusBar from '@/components/common/StatusBar'
 
 const MAX_WIDTH = scaleSizeW(300)
 
 const Content = () => {
   const drawer = useRef<DrawerLayoutFixedType>(null)
   const drawerLayoutPosition = useSettingValue('common.drawerLayoutPosition')
+  const navActiveId = useNavActiveId()
+  const hideHeader = Platform.OS === 'ios' && navActiveId === 'nav_setting'
 
   useEffect(() => {
     const changeVisible = (visible: boolean) => {
@@ -44,7 +49,7 @@ const Content = () => {
       drawerPosition={drawerLayoutPosition}
       renderNavigationView={navigationView}
     >
-      <Header />
+      {hideHeader ? <StatusBar /> : <Header />}
       <Main />
       {/* <View style={styles.container}>
       </View> */}

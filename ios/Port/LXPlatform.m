@@ -16,7 +16,8 @@ RCT_EXPORT_MODULE();
 - (NSDictionary *)constantsToExport {
 #if TARGET_OS_SIMULATOR
   return @{@"smokeTestRequested":@([NSProcessInfo.processInfo.environment[@"LX_IOS_SMOKE"] boolValue]),
-           @"smokeHTTPProbeRequested":@([NSProcessInfo.processInfo.environment[@"LX_IOS_HTTP_PROBE"] boolValue])};
+           @"smokeHTTPProbeRequested":@([NSProcessInfo.processInfo.environment[@"LX_IOS_HTTP_PROBE"] boolValue]),
+           @"uiSmokeScreen":NSProcessInfo.processInfo.environment[@"LX_IOS_UI_SCREEN"] ?: @""};
 #else
   return @{@"smokeTestRequested":@NO};
 #endif

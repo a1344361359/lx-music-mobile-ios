@@ -25,6 +25,7 @@ else
   build 2>&1 | tee build/simulator-build.log
   app=build/SimulatorData/Build/Products/Release-iphonesimulator/LxMusicMobile.app
 fi
+bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
 python3 scripts/check-ios-network.py "$app/Info.plist"
 # A qualified hostname is essential: localhost/IP exceptions would hide the ATS bug.
 echo '127.0.0.1 lx-ios-fixture.test' | sudo tee -a /etc/hosts
@@ -39,9 +40,9 @@ curl --noproxy '*' --fail --silent http://lx-ios-fixture.test:18765/search >/dev
 # Same binary and endpoint, old policy: prove that HTTP really was blocked.
 /usr/libexec/PlistBuddy -c 'Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true' "$app/Info.plist"
 xcrun simctl install "$device" "$app"
-SIMCTL_CHILD_LX_IOS_SMOKE=1 SIMCTL_CHILD_LX_IOS_HTTP_PROBE=1 xcrun simctl launch --console "$device" com.wowsylvanas.lxmusic.ios > build/simulator-ats-control.log 2>&1 &
+SIMCTL_CHILD_LX_IOS_SMOKE=1 SIMCTL_CHILD_LX_IOS_HTTP_PROBE=1 xcrun simctl launch --console "$device" "$bundle_id" > build/simulator-ats-control.log 2>&1 &
 control_pid=$!
-container=$(xcrun simctl get_app_container "$device" com.wowsylvanas.lxmusic.ios data)
+container=$(xcrun simctl get_app_container "$device" "$bundle_id" data)
 probe="$container/Library/Caches/lx-ios-http-probe.json"
 for attempt in $(seq 1 30); do
   if [ -f "$probe" ]; then break; fi
@@ -50,16 +51,34 @@ for attempt in $(seq 1 30); do
 done
 cp "$probe" build/lx-ios-http-probe.json
 python3 -c 'import json; r=json.load(open("build/lx-ios-http-probe.json")); print("Old ATS policy:",r); assert r["status"]=="blocked",r'
-xcrun simctl terminate "$device" com.wowsylvanas.lxmusic.ios
+xcrun simctl terminate "$device" "$bundle_id"
 wait "$control_pid" || true
-xcrun simctl uninstall "$device" com.wowsylvanas.lxmusic.ios
+xcrun simctl uninstall "$device" "$bundle_id"
 /usr/libexec/PlistBuddy -c 'Delete :NSAppTransportSecurity:NSAllowsLocalNetworking' "$app/Info.plist"
 python3 scripts/check-ios-network.py "$app/Info.plist"
 ditto -c -k --keepParent "$app" build/simulator-app.zip
+capture_ui() {
+  screen=$1
+  output=$2
+  container=$(xcrun simctl get_app_container "$device" "$bundle_id" data)
+  report="$container/Library/Caches/lx-ios-smoke.json"
+  rm -f "$report"
+  SIMCTL_CHILD_LX_IOS_SMOKE=1 SIMCTL_CHILD_LX_IOS_UI_SCREEN="$screen" xcrun simctl launch "$device" "$bundle_id" >/dev/null
+  for attempt in $(seq 1 40); do
+    if [ -f "$report" ]; then break; fi
+    sleep 1
+  done
+  sleep 2
+  xcrun simctl io "$device" screenshot "$output"
+  xcrun simctl terminate "$device" "$bundle_id" >/dev/null 2>&1 || true
+}
+
 xcrun simctl install "$device" "$app"
-SIMCTL_CHILD_LX_IOS_SMOKE=1 xcrun simctl launch --console "$device" com.wowsylvanas.lxmusic.ios > build/simulator-console.log 2>&1 &
+capture_ui home build/ios-home.png
+capture_ui settings build/ios-settings.png
+SIMCTL_CHILD_LX_IOS_SMOKE=1 xcrun simctl launch --console "$device" "$bundle_id" > build/simulator-console.log 2>&1 &
 launch_pid=$!
-container=$(xcrun simctl get_app_container "$device" com.wowsylvanas.lxmusic.ios data)
+container=$(xcrun simctl get_app_container "$device" "$bundle_id" data)
 report="$container/Library/Caches/lx-ios-smoke.json"
 for attempt in $(seq 1 60); do
   if [ -f "$report" ]; then break; fi

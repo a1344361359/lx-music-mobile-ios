@@ -526,10 +526,9 @@ export const createStyle = <T extends StyleSheet.NamedStyles<T>>(styles: T | Sty
   return StyleSheet.create(newStyle as StyleSheet.NamedStyles<T>)
 }
 
-export const isHorizontalMode = (_width: number, _height: number): boolean => {
-  // 桌面版 UI：始终使用横屏式左右布局（左侧导航 + 顶部栏 + 底部播放条）。
-  // 保留这个函数签名，避免各个页面里已有的调用点需要改动。
-  return true
+export const isHorizontalMode = (width: number, height: number): boolean => {
+  // iPhone 竖屏使用原生手机布局，横屏/iPad 保留左右分栏。
+  return width / height > 1.2
 }
 
 

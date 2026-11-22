@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo, forwardRef, useImperativeHandle } from 'react'
-import { FlatList, View, RefreshControl, type FlatListProps } from 'react-native'
+import { FlatList, View, RefreshControl, Platform, useWindowDimensions, type FlatListProps } from 'react-native'
 
 import ListItem from './ListItem'
 // import { navigations } from '@/navigation'
@@ -8,7 +8,7 @@ import { useLayout } from '@/utils/hooks'
 import { useTheme } from '@/store/theme/hook'
 import { useI18n } from '@/lang'
 import { scaleSizeW } from '@/utils/pixelRatio'
-import { createStyle } from '@/utils/tools'
+import { createStyle, isHorizontalMode } from '@/utils/tools'
 import Text from '@/components/common/Text'
 
 type FlatListType = FlatListProps<ListInfoItem>
@@ -35,6 +35,8 @@ export default forwardRef<ListType, ListProps>(({ onRefresh, onLoadMore, onOpenD
   const [showSource, setShowSource] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
   const { onLayout, width } = useLayout()
+  const windowSize = useWindowDimensions()
+  const isIOSPhone = Platform.OS === 'ios' && windowSize.width < 500 && !isHorizontalMode(windowSize.width, windowSize.height)
   const theme = useTheme()
   // console.log('render songlist')
 
@@ -112,6 +114,14 @@ export default forwardRef<ListType, ListProps>(({ onRefresh, onLoadMore, onOpenD
   // console.log(Math.trunc(width * 0.125), itemWidth)
   // console.log(itemWidth, MIN_WIDTH, GAP, width)
   const rowInfo = useMemo(() => {
+    // iPhone 竖屏使用两列大封面，避免桌面版的密集小卡片。
+    if (isIOSPhone) {
+      const num = 2
+      return {
+        num,
+        width: Math.floor((windowSize.width - 40) / num),
+      }
+    }
     let w = width - GAP
     let n = width / (MIN_WIDTH + GAP)
     if (n > 10) n = 10
@@ -121,7 +131,7 @@ export default forwardRef<ListType, ListProps>(({ onRefresh, onLoadMore, onOpenD
       num,
       width: (width - GAP) / num,
     }
-  }, [width])
+  }, [width, isIOSPhone, windowSize.width])
   // console.log(rowNum)
   const list = useMemo(() => {
     const list = [...currentList]

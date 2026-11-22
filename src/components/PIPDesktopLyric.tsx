@@ -3,6 +3,7 @@ import { AppState, NativeModules, Platform } from 'react-native'
 import { useLrcSet } from '@/plugins/lyric'
 import { useIsPlay, useProgress } from '@/store/player/hook'
 import { useSettingValue } from '@/store/setting/hook'
+import { setBackgroundAudioPlaying } from '@/utils/nativeModules/backgroundAudio'
 
 const { LXPipLyric } = NativeModules
 
@@ -46,6 +47,11 @@ export default () => {
   })
 
   useEffect(() => {
+    if (Platform.OS !== 'ios') return
+    setBackgroundAudioPlaying(isPlay)
+  }, [isPlay])
+
+  useEffect(() => {
     if (Platform.OS !== 'ios' || !LXPipLyric) return
     if (!enabled) {
       configuredRef.current = false
@@ -69,7 +75,7 @@ export default () => {
       if (next === 'background') void LXPipLyric.start()
     }
     const sub = AppState.addEventListener('change', onAppState)
-    return () => sub.remove()
+    return () => { sub.remove() }
   }, [enabled])
 
   useEffect(() => {

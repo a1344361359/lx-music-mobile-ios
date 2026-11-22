@@ -84,7 +84,7 @@ test('iOS explicit stop and queue changes do not report natural completion', asy
     pause: async() => {},
   }
   const service = load('src/plugins/player/service.ts', {
-    'react-native': { Platform: { OS: 'ios' } },
+    'react-native': { Platform: { OS: 'ios' }, AppState: { currentState: 'active' } },
     '@/plugins/player/trackPlayer': {
       __esModule: true, default: backend, State: {},
       Event: { PlaybackTrackChanged: 'changed', PlaybackQueueEnded: 'ended' },
@@ -93,6 +93,7 @@ test('iOS explicit stop and queue changes do not report natural completion', asy
     './playList': { getCurrentTrackId: async() => currentID },
     '@/core/common': { exitApp() {} },
     '@/core/player/player': { pause() {}, play() {}, playNext() {}, playPrev() {} },
+    '@/utils/nativeModules/backgroundAudio': { setBackgroundAudioPlaying() {} },
   }, { global: app, console })
   service.default()
 

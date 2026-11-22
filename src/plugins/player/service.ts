@@ -7,18 +7,18 @@ import { isTempId, isEmpty } from './utils'
 // import { play as lrcPlay, pause as lrcPause } from '@/core/lyric'
 import { exitApp } from '@/core/common'
 import { getCurrentTrackId } from './playList'
-import playerState from '@/store/player/state'
 import { setBackgroundAudioPlaying } from '@/utils/nativeModules/backgroundAudio'
 import { pause, play, playNext, playPrev } from '@/core/player/player'
 
 let isInitialized = false
 let lastAutoResumeAt = 0
 let lastUserPauseAt = 0
+let isPlaying = false
 
 // 某些系统/耳机在后台会错误地暂停 RNTP；只要用户没有主动暂停，就在短暂延迟后恢复。
 const tryResumeBackgroundPlayback = async() => {
   if (Platform.OS !== 'ios' || AppState.currentState === 'active') return
-  if (!playerState.isPlay) return
+  if (!isPlaying) return
   const now = Date.now()
   if (now - lastAutoResumeAt < 2000) return
   if (now - lastUserPauseAt < 3000) return
@@ -54,6 +54,7 @@ const registerPlaybackService = async() => {
 
   TrackPlayer.addEventListener(TPEvent.RemotePause, () => {
     // console.log('remote-pause')
+    isPlaying = false
     lastUserPauseAt = Date.now()
     void pause()
   })
@@ -106,12 +107,13 @@ const registerPlaybackService = async() => {
         break
       case TPState.Ready:
       case TPState.Stopped:
+        isPlaying = false
         setBackgroundAudioPlaying(false)
         global.app_event.playerPause()
         global.app_event.pause()
         break
       case TPState.Paused:
-        if (playerState.isPlay && AppState.currentState !== 'active') {
+        if (isPlaying && AppState.currentState !== 'active') {
           void tryResumeBackgroundPlayback()
           break
         }
@@ -120,6 +122,7 @@ const registerPlaybackService = async() => {
         global.app_event.pause()
         break
       case TPState.Playing:
+        isPlaying = true
         setBackgroundAudioPlaying(true)
         global.app_event.playerPlaying()
         global.app_event.play()

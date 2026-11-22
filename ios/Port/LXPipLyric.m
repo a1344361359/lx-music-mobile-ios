@@ -175,6 +175,14 @@ RCT_EXPORT_MODULE(LXPipLyric)
   self.basePosition = [positionValue respondsToSelector:@selector(doubleValue)] ? [positionValue doubleValue] : 0;
   self.basePositionTime = CACurrentMediaTime();
   self.lastLineIndex = -1;
+  // 系统画中画需要处于播放类音频会话，否则可能无法拉起。
+  NSError *audioError = nil;
+  AVAudioSession *audioSession = AVAudioSession.sharedInstance;
+  [audioSession setCategory:AVAudioSessionCategoryPlayback
+                         mode:AVAudioSessionModeMoviePlayback
+                      options:AVAudioSessionCategoryOptionDuckOthers | AVAudioSessionCategoryOptionAllowBluetoothA2DP
+                        error:&audioError];
+  if (audioError == nil) [audioSession setActive:YES error:&audioError];
   [self attachDisplayViewIfNeeded];
   [self renderCurrentFrame];
 
@@ -508,7 +516,7 @@ RCT_EXPORT_MODULE(LXBackgroundAudio)
   AVAudioSession *session = AVAudioSession.sharedInstance;
   [session setCategory:AVAudioSessionCategoryPlayback
                    mode:AVAudioSessionModeDefault
-                options:AVAudioSessionCategoryOptionDuckOthers
+                options:AVAudioSessionCategoryOptionDuckOthers | AVAudioSessionCategoryOptionAllowBluetoothA2DP
                   error:&error];
   if (error != nil) NSLog(@"[LXBackgroundAudio] setCategory error: %@", error.localizedDescription);
   error = nil;

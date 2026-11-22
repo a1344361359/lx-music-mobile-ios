@@ -220,15 +220,10 @@ const updateMetaInfo = async(mInfo: LX.Player.MusicInfo) => {
   state.isPlaying = await TrackPlayer.getState() == State.Playing
   let artwork = isShowNotificationImage ? mInfo.pic ?? prevArtwork : undefined
   if (mInfo.pic) prevArtwork = mInfo.pic
-  let title: string
-  let artist: string
-  if (playerState.lastLyric == null) {
-    title = mInfo.name ?? 'Unknow'
-    artist = mInfo.singer ?? 'Unknow'
-  } else {
-    title = playerState.lastLyric
-    artist = `${mInfo.name}${mInfo.singer ? ` - ${mInfo.singer}` : ''}`
-  }
+  // 锁屏 / 通知栏 / 灵动岛始终显示歌曲名和歌手，
+  // 不再把当前歌词塞进 title，否则会出现“歌曲名变成歌词”的显示问题。
+  const title = mInfo.name ?? '未知歌曲'
+  const artist = mInfo.singer || '未知歌手'
   await TrackPlayer.updateNowPlayingMetadata({
     title,
     artist,

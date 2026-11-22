@@ -530,5 +530,8 @@
   "version_title_new": "🌟 发现新版本 🌟",
   "version_title_unknown": "❓ 获取最新版本信息失败 ❓",
   "version_title_update": "🚀 软件更新 🚀",
-  "setting_play_show_live_activity": "灵动岛实时歌词"
+  "setting_play_show_live_activity": "灵动岛实时歌词",
+  "setting_play_live_activity_played_color": "已播放歌词颜色",
+  "setting_play_live_activity_unplayed_color": "未播放歌词颜色",
+  "setting_play_live_activity_color_tip": "在灵动岛和锁屏歌词上生效，输入 #RRGGBB 可自定义颜色。"
 }

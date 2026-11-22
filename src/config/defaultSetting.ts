@@ -35,6 +35,8 @@ const defaultSetting: LX.AppSetting = {
   'player.isShowBluetoothLyric': false,
   'player.isShowBluetoothFullLyric': false,
   'player.isShowLiveActivity': true,
+  'player.liveActivityLyricPlayedColor': '#31C27C',
+  'player.liveActivityLyricUnplayedColor': '#FFFFFF',
 
   // 'playDetail.isZoomActiveLrc': false,
   // 'playDetail.isShowLyricProgressSetting': false,

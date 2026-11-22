@@ -19,6 +19,7 @@ import { getPosition } from '@/plugins/player'
 import playerState from '@/store/player/state'
 import settingState from '@/store/setting/state'
 import { updateNowPlayingTitles } from '@/plugins/player/utils'
+import { Platform } from 'react-native'
 
 /**
  * init lyric
@@ -35,7 +36,7 @@ export const init = async() => {
 const handleSetLyric = async(lyric: string, translation = '', romalrc = '') => {
   lrcSetLyric(lyric, translation, romalrc)
   await setDesktopLyric(lyric, translation, romalrc)
-  if (settingState.setting['player.isShowBluetoothFullLyric']) {
+  if (Platform.OS !== 'ios' && settingState.setting['player.isShowBluetoothFullLyric']) {
     void updateNowPlayingTitles({
       lyric,
     })

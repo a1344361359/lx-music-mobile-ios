@@ -207,6 +207,16 @@ declare global {
       'player.isShowLiveActivity': boolean
 
       /**
+       * 灵动岛/锁屏歌词-已播放部分的颜色，十六进制颜色值
+       */
+      'player.liveActivityLyricPlayedColor': string
+
+      /**
+       * 灵动岛/锁屏歌词-未播放部分的颜色，十六进制颜色值
+       */
+      'player.liveActivityLyricUnplayedColor': string
+
+      /**
        * 播放详情页-是否缩放当前播放的歌词行
        */
       // 'playDetail.isZoomActiveLrc': boolean

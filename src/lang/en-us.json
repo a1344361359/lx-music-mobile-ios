@@ -530,5 +530,8 @@
   "version_title_new": "🌟 New version found 🌟",
   "version_title_unknown": "❓ Failed to get the latest version information ❓",
   "version_title_update": "🚀 App update 🚀",
-  "setting_play_show_live_activity": "Live lyrics on Dynamic Island"
+  "setting_play_show_live_activity": "Live lyrics on Dynamic Island",
+  "setting_play_live_activity_played_color": "Played lyric color",
+  "setting_play_live_activity_unplayed_color": "Unplayed lyric color",
+  "setting_play_live_activity_color_tip": "Used by Dynamic Island and Lock Screen lyrics. Enter a custom #RRGGBB color."
 }

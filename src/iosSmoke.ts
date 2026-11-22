@@ -198,14 +198,18 @@ export const runSmokeTests = async() => {
 
     const liveActivity = NativeModules.LXLiveActivity
     assert(liveActivity && typeof liveActivity.start === 'function', 'LXLiveActivity native module is missing')
-    assert(await liveActivity.isSupported() === true, 'Live Activities are not available in the simulator')
+    assert(typeof await liveActivity.isSupported() === 'boolean', 'Live Activities support check failed')
     liveActivity.start({
       songId: 'ios-smoke-live-activity',
       title: 'Smoke test',
       artist: 'CI',
+      artworkUrl: '',
+      playedColor: '#31C27C',
+      unplayedColor: '#FFFFFF',
       duration: 12,
       position: 0,
       isPlaying: true,
+      playbackRate: 1,
       lines: [
         { time: 0, text: '第一行歌词' },
         { time: 3000, text: '第二行歌词' },

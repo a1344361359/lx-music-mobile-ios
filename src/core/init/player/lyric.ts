@@ -4,9 +4,12 @@ import { onDesktopLyricPositionChange, showDesktopLyric, onLyricLinePlay, showRe
 import playerState from '@/store/player/state'
 import { updateNowPlayingTitles } from '@/plugins/player/utils'
 import { setLastLyric } from '@/core/player/playInfo'
+import { Platform } from 'react-native'
 
 const updateRemoteLyric = async(lrc?: string) => {
   setLastLyric(lrc)
+  // iOS 的锁屏/灵动岛歌词由 Live Activity 负责，不能再用歌词覆盖歌曲标题。
+  if (Platform.OS === 'ios') return
   if (lrc == null) {
     void updateNowPlayingTitles({
       title: playerState.musicInfo.name,

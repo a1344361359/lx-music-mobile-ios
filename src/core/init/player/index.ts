@@ -6,10 +6,12 @@ import initWatchList from './watchList'
 import initPlayProgress from './playProgress'
 import initPreloadNextMusic from './preloadNextMusic'
 import initLyric from './lyric'
+import initLiveActivity from './liveActivity'
 
 export default async(setting: LX.AppSetting) => {
   await initPlayer(setting)
   await initLyric(setting)
+  await initLiveActivity(setting)
   await initPlayInfo(setting)
   initPlayStatus()
   initPlayerEvent()

@@ -34,6 +34,7 @@ const defaultSetting: LX.AppSetting = {
   'player.isS2t': false,
   'player.isShowBluetoothLyric': false,
   'player.isShowBluetoothFullLyric': false,
+  'player.isShowLiveActivity': true,
 
   // 'playDetail.isZoomActiveLrc': false,
   // 'playDetail.isShowLyricProgressSetting': false,

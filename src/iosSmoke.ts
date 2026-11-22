@@ -196,6 +196,25 @@ export const runSmokeTests = async() => {
     assert(documentPicker && typeof documentPicker.openDocument === 'function', 'LXDocumentPicker native module is missing')
     checks.push('native document picker module registered')
 
+    const liveActivity = NativeModules.LXLiveActivity
+    assert(liveActivity && typeof liveActivity.start === 'function', 'LXLiveActivity native module is missing')
+    assert(await liveActivity.isSupported() === true, 'Live Activities are not available in the simulator')
+    liveActivity.start({
+      songId: 'ios-smoke-live-activity',
+      title: 'Smoke test',
+      artist: 'CI',
+      duration: 12,
+      position: 0,
+      isPlaying: true,
+      lines: [
+        { time: 0, text: '第一行歌词' },
+        { time: 3000, text: '第二行歌词' },
+      ],
+    })
+    await pause(1200)
+    liveActivity.end()
+    checks.push('native live activity module registered')
+
     const path = RNFS.CachesDirectoryPath + '/ios-smoke-fixture'
     await writeFile(path, text)
     await gzipFile(path, path + '.gz')

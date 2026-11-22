@@ -202,6 +202,11 @@ declare global {
       'player.isShowBluetoothFullLyric': boolean
 
       /**
+       * 是否在灵动岛显示实时歌词（iOS 16.1+）
+       */
+      'player.isShowLiveActivity': boolean
+
+      /**
        * 播放详情页-是否缩放当前播放的歌词行
        */
       // 'playDetail.isZoomActiveLrc': boolean

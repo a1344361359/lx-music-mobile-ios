@@ -4,11 +4,13 @@ import { View } from 'react-native'
 
 import CheckBox, { type CheckBoxProps } from '@/components/common/CheckBox'
 import { createStyle } from '@/utils/tools'
+import { useUIScale } from '@/components/common/UIScaleContext'
 
 
 export default memo((props: CheckBoxProps) => {
+  const scale = useUIScale()
   return (
-    <View style={styles.container}>
+    <View style={{ ...styles.container, paddingLeft: styles.container.paddingLeft * scale }}>
       <CheckBox {...props} />
     </View>
   )

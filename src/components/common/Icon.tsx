@@ -4,6 +4,7 @@ import { scaleSizeW } from '@/utils/pixelRatio'
 import { memo, type ComponentProps } from 'react'
 import { useTextShadow, useTheme } from '@/store/theme/hook'
 import { StyleSheet, type StyleProp, type TextStyle } from 'react-native'
+import { useUIScale } from './UIScaleContext'
 
 // import IconAntDesign from 'react-native-vector-icons/AntDesign'
 // import IconEntypo from 'react-native-vector-icons/Entypo'
@@ -36,6 +37,7 @@ interface IconProps extends Omit<ComponentProps<IconType>, 'style'> {
 export const Icon = memo(({ size = 15, rawSize, color, style, ...props }: IconProps) => {
   const theme = useTheme()
   const textShadow = useTextShadow()
+  const uiScale = useUIScale()
   const newStyle = textShadow ? StyleSheet.compose({
     textShadowColor: theme['c-primary-dark-300-alpha-800'],
     textShadowOffset: { width: 0.2, height: 0.2 },
@@ -43,7 +45,7 @@ export const Icon = memo(({ size = 15, rawSize, color, style, ...props }: IconPr
   }, style) : style
   return (
     <IcoMoon
-      size={rawSize ?? scaleSizeW(size)}
+      size={rawSize ?? scaleSizeW(size) * uiScale}
       color={color ?? theme['c-font']}
       // @ts-expect-error
       style={newStyle}

@@ -115,10 +115,22 @@ RCT_EXPORT_MODULE();
   [self clearPending];
 }
 
+- (BOOL)isPickerVisible {
+  UIDocumentPickerViewController *picker = self.activePicker;
+  return picker != nil && picker.presentingViewController != nil && picker.view.window != nil;
+}
+
 RCT_EXPORT_METHOD(openDocument:(NSDictionary *)options resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
   if (self.pendingResolve) {
-    reject(@"PICKER_BUSY", @"A document picker is already open", nil);
-    return;
+    // A previous request can be left pending after its presenting controller was
+    // dismissed (for example when a React Native modal closes). Do not block all
+    // later imports because of that stale request.
+    if ([self isPickerVisible]) {
+      reject(@"picker_busy", @"A document picker is already open", nil);
+      return;
+    }
+    if (self.pendingReject) self.pendingReject(@"picker_cancelled", @"Stale document picker request", nil);
+    [self clearPending];
   }
   self.pendingResolve = resolve;
   self.pendingReject = reject;
@@ -143,20 +155,33 @@ RCT_EXPORT_METHOD(openDocument:(NSDictionary *)options resolver:(RCTPromiseResol
       presenter = presenter.presentedViewController;
     }
     if (!presenter || presenter.isBeingDismissed) {
-      [self rejectPending:@"PICKER_PRESENT" message:@"No view controller is available to present the document picker"];
+      [self rejectPending:@"picker_present" message:@"No view controller is available to present the document picker"];
       return;
     }
 
     [presenter presentViewController:picker animated:YES completion:^{
       // Detect a silent presentation failure so the JS layer can fall back immediately.
-      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         if (!self.pendingResolve || !self.activePicker) return;
-        if (presenter.presentedViewController != picker) {
-          [self rejectPending:@"PICKER_PRESENT" message:@"The document picker did not become visible"];
+        if (![self isPickerVisible]) {
+          [self rejectPending:@"picker_present" message:@"The document picker did not become visible"];
         }
       });
     }];
   });
+}
+
+// Used by the simulator smoke test to verify presentation and cleanup without a user tap.
+RCT_EXPORT_METHOD(dismissActivePicker:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+  BOOL visible = [self isPickerVisible];
+  UIDocumentPickerViewController *picker = self.activePicker;
+  if (visible && picker != nil) {
+    [picker dismissViewControllerAnimated:YES completion:^{ resolve(@{@"presented": @YES}); }];
+    return;
+  }
+  if (self.pendingResolve) self.pendingResolve(nil);
+  [self clearPending];
+  resolve(@{@"presented": @NO});
 }
 
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {

@@ -35,6 +35,7 @@ export interface ScriptImportExportType {
 
 export default forwardRef<ScriptImportExportType, ScriptImportExportProps>((props, ref) => {
   const [visible, setVisible] = useState(false)
+  const openingRef = useRef(false)
   const choosePathRef = useRef<ChoosePathType>(null)
   const selectInfoRef = useRef<SelectInfo>((initSelectInfo as SelectInfo))
 
@@ -53,6 +54,8 @@ export default forwardRef<ScriptImportExportType, ScriptImportExportProps>((prop
 
   useImperativeHandle(ref, () => ({
     import() {
+      if (openingRef.current) return
+      openingRef.current = true
       selectInfoRef.current = { action: 'import' }
       if (Platform.OS === 'ios' && props.onBeforeNativePicker) {
         // The uploaded IPA waits until every RN modal is gone before presenting
@@ -65,15 +68,18 @@ export default forwardRef<ScriptImportExportType, ScriptImportExportProps>((prop
           }).then(file => {
             if (file?.data) handleImportLocalFile(file.data)
           }).catch((err: any) => {
-            if (err?.code !== 'picker_cancelled') {
+            const code = String(err?.code ?? '').toLowerCase()
+            if (code !== 'picker_cancelled' && code !== 'picker_busy') {
               toast(`打开系统文件选择器失败：${err?.message ?? '未知错误'}`, 'long')
             }
           }).finally(() => {
+            openingRef.current = false
             props.onAfterNativePicker?.()
           })
         })
         return
       }
+      openingRef.current = false
       openBuiltInPicker()
     },
     // export(listInfo, index) {

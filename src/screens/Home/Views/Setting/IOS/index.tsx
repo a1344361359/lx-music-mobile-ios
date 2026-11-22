@@ -7,7 +7,10 @@ import { useI18n } from '@/lang'
 import { useTheme } from '@/store/theme/hook'
 import { createStyle } from '@/utils/tools'
 import { type SettingScreenIds } from '../Main'
+import { UIScaleContext } from '@/components/common/UIScaleContext'
 import Detail from './Detail'
+
+const DETAIL_SCALE = 1.5
 
 const GROUPS: Array<{ title: string, ids: SettingScreenIds[] }> = [
   { title: '常用', ids: ['basic', 'player', 'lyric_desktop'] },
@@ -45,6 +48,12 @@ export default () => {
   }, [])
 
   useEffect(() => {
+    const openDetail = (id: SettingScreenIds) => { setActive(id) }
+    global.app_event.on('iosSettingOpenDetail', openDetail)
+    return () => { global.app_event.off('iosSettingOpenDetail', openDetail) }
+  }, [])
+
+  useEffect(() => {
     if (!active) return
     const sub = BackHandler.addEventListener('hardwareBackPress', handleBack)
     return () => { sub.remove() }
@@ -63,10 +72,12 @@ export default () => {
         </View>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.detailContent}
+          contentContainerStyle={{ ...styles.detailContent, paddingTop: styles.detailContent.paddingTop * DETAIL_SCALE }}
           keyboardShouldPersistTaps="always"
         >
-          <Detail id={active} />
+          <UIScaleContext.Provider value={DETAIL_SCALE}>
+            <Detail id={active} />
+          </UIScaleContext.Provider>
         </ScrollView>
       </View>
     )

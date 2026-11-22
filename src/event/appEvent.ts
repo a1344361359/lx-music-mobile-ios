@@ -15,6 +15,9 @@ import { type SearchType } from '@/store/search/state'
 // }
 
 export class AppEvent extends Event {
+  iosSettingOpenDetail(id: string) {
+    this.emit('iosSettingOpenDetail', id)
+  }
   // configUpdate() {
   //   this.emit('configUpdate')
   // }

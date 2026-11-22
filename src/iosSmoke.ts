@@ -182,8 +182,14 @@ export const runSmokeTests = async() => {
   const uiScreen = NativeModules.UtilsModule.uiSmokeScreen as string | undefined
   if (uiScreen) {
     // Dedicated UI snapshots: keep the screen stable so the runner can capture it.
-    setNavActiveId(uiScreen === 'settings' ? 'nav_setting' : 'nav_songlist')
-    await pause(1400)
+    if (uiScreen === 'settings_detail') {
+      setNavActiveId('nav_setting')
+      await pause(300)
+      global.app_event.iosSettingOpenDetail('basic')
+    } else {
+      setNavActiveId(uiScreen === 'settings' ? 'nav_setting' : 'nav_songlist')
+    }
+    await pause(1800)
     await RNFS.writeFile(reportPath, JSON.stringify({ status: 'passed', checks: [`ui snapshot: ${uiScreen}`], screen: uiScreen }))
     return
   }
@@ -203,6 +209,12 @@ export const runSmokeTests = async() => {
     const documentPicker = NativeModules.LXDocumentPicker
     assert(documentPicker && typeof documentPicker.openDocument === 'function', 'LXDocumentPicker native module is missing')
     checks.push('native document picker module registered')
+    const pickerPromise = documentPicker.openDocument({ extTypes: ['js'], toPath: '' })
+    await pause(1500)
+    const dismissResult = await documentPicker.dismissActivePicker()
+    assert(dismissResult?.presented === true, 'Document picker did not become visible')
+    assert(await pickerPromise === null, 'Document picker did not dismiss cleanly')
+    checks.push('native document picker presents and cancels cleanly')
 
     const liveActivity = NativeModules.LXLiveActivity
     if (liveActivity && typeof liveActivity.start === 'function') {

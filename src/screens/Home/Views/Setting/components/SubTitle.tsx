@@ -3,14 +3,16 @@ import { memo } from 'react'
 import { View } from 'react-native'
 import { createStyle } from '@/utils/tools'
 import Text from '@/components/common/Text'
+import { useUIScale } from '@/components/common/UIScaleContext'
 
 export default memo(({ title, children }: {
   title: string
   children: React.ReactNode | React.ReactNode[]
 }) => {
+  const scale = useUIScale()
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+    <View style={{ ...styles.container, paddingLeft: styles.container.paddingLeft * scale, marginBottom: styles.container.marginBottom * scale }}>
+      <Text style={{ ...styles.title, marginLeft: styles.title.marginLeft * scale, marginBottom: styles.title.marginBottom * scale }}>{title}</Text>
       {children}
     </View>
   )

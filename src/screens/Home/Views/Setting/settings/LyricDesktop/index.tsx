@@ -35,11 +35,11 @@ export default memo(() => {
       {Platform.OS !== 'ios' && <IsLockLyric />}
       {Platform.OS !== 'ios' && <IsShowToggleAnima />}
       <IsSingleLine />
+      <LyricOffset />
       <Theme />
       <LyricColors />
       <TextSize />
       <ViewWidth />
-      <LyricOffset />
       {Platform.OS !== 'ios' && <MaxLineNum />}
       {Platform.OS !== 'ios' && <TextOpacity />}
       {Platform.OS !== 'ios' && <TextPositionX />}

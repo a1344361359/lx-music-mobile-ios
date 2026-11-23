@@ -8,6 +8,7 @@ import themeState from '@/store/theme/state'
 import { isUrl } from '@/utils'
 import { privateStorageDirectoryPath } from '@/utils/fs'
 import { type ImageSourcePropType } from 'react-native'
+import { createThemeColors } from './utils'
 
 const allThemes = [...themes, kmusicTheme, kmusicLightTheme, liquidGlassTheme] as LX.Theme[]
 
@@ -76,8 +77,16 @@ const LIGHT_APPEARANCE = {
 const applyAppearanceMode = (active: LX.ActiveTheme, originalIsDark: boolean, targetIsDark: boolean): LX.ActiveTheme => {
   if (originalIsDark === targetIsDark) return { ...active, isDark: targetIsDark }
   const palette = targetIsDark ? DARK_APPEARANCE : LIGHT_APPEARANCE
+  // 重建整套 accent/灰阶色板，避免只换背景与主文字后，序号、副标题等
+  // 仍沿用原主题的浅色灰阶，在反色模式下看不清。
+  const appearanceColors = createThemeColors(
+    active['c-primary'],
+    targetIsDark ? 'rgb(245, 245, 247)' : 'rgb(28, 28, 30)',
+    targetIsDark,
+  ) as unknown as Partial<LX.ActiveTheme>
   const themed: LX.ActiveTheme = {
     ...active,
+    ...appearanceColors,
     ...palette,
     isDark: targetIsDark,
     'c-button-font': targetIsDark ? 'rgb(245, 245, 247)' : 'rgb(28, 28, 30)',

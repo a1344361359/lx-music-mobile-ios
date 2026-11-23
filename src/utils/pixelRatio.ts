@@ -15,7 +15,7 @@ const designHeight = 667.0
 // iOS 的这套桌面尺寸换算会把控件缩到约三分之一，这里补回基础倍率。
 // 字号可以放大到 150%，但控件尺寸仍限制在 120%，避免按钮和图片被撑破。
 const IOS_UI_BASE = 2.0
-const getAppFontScale = () => Platform.OS === 'ios' ? Math.min(global.lx.fontSize * 1.08, 1.5) : global.lx.fontSize
+const getAppFontScale = () => Platform.OS === 'ios' ? Math.min(global.lx.fontSize * 1.75, 2.0) : global.lx.fontSize
 const getAppLayoutScale = () => Platform.OS === 'ios' ? Math.min(global.lx.fontSize, 1.2) : global.lx.fontSize
 
 // 获取屏幕的dp

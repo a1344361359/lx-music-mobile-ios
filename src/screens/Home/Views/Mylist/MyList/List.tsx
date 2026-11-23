@@ -13,6 +13,7 @@ import Text from '@/components/common/Text'
 import { type Position } from './ListMenu'
 import { scaleSizeH } from '@/utils/pixelRatio'
 import Loading from '@/components/common/Loading'
+import FadeSlideIn from '@/components/common/FadeSlideIn'
 
 type FlatListType = FlatListProps<LX.List.MyListInfo>
 
@@ -101,14 +102,16 @@ export default ({ onShowMenu }: {
   }, [])
 
   const renderItem: FlatListType['renderItem'] = ({ item, index }) => (
-    <ListItem
-      key={item.id}
-      item={item}
-      index={index}
-      activeId={activeListId}
-      onPress={handleToggleList}
-      onShowMenu={showMenu}
-    />
+    <FadeSlideIn index={index} distance={8} duration={240}>
+      <ListItem
+        key={item.id}
+        item={item}
+        index={index}
+        activeId={activeListId}
+        onPress={handleToggleList}
+        onShowMenu={showMenu}
+      />
+    </FadeSlideIn>
   )
   const getkey: FlatListType['keyExtractor'] = item => item.id
   const getItemLayout: FlatListType['getItemLayout'] = (data, index) => {

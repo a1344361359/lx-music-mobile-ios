@@ -7,6 +7,7 @@ import { scaleSizeAbsHR } from '@/utils/pixelRatio'
 import { defaultHeaders } from './common/Image'
 import SizeView from './SizeView'
 import FadeSlideIn from './common/FadeSlideIn'
+import StatusBar from './common/StatusBar'
 import { useBgPic } from '@/store/common/hook'
 import { useSettingValue } from '@/store/setting/hook'
 import { hexToRgba } from '@/theme/themes/kmusic'
@@ -98,6 +99,7 @@ export default ({ children }: Props) => {
   // 根视图铺满屏幕，状态栏和底部 Home 指示条区域也由同一张背景覆盖。
   return (
     <View style={{ flex: 1, backgroundColor: theme['c-content-background'] }}>
+      <StatusBar />
       <SizeView />
       {pic && !customWallpaperUri ? picComponent : themeComponent}
     </View>

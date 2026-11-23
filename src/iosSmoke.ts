@@ -10,7 +10,7 @@ import { gzipFile, unGzipFile, readFile, writeFile } from '@/utils/fs'
 import { getBootLog } from '@/utils/bootLog'
 import { setNavActiveId, updateSetting } from '@/core/common'
 import { applyTheme } from '@/core/theme'
-import { getTheme } from '@/theme/themes'
+import { buildActiveThemeColors, getTheme } from '@/theme/themes'
 import settingState from '@/store/setting/state'
 import { drawerStates } from '@/utils/iosDrawerSmoke'
 import { smokeFatalErrors } from '@/utils/errorHandle'
@@ -286,9 +286,9 @@ export const runSmokeTests = async() => {
     const originalThemeId = settingState.setting['theme.id']
     const originalAppearance = settingState.setting['theme.appearanceMode']
     updateSetting({ 'theme.appearanceMode': 'light' })
-    assert(!(await getTheme()).isDark, 'Light appearance did not produce a light theme')
+    assert(!buildActiveThemeColors(await getTheme()).isDark, 'Light appearance did not produce a light theme')
     updateSetting({ 'theme.appearanceMode': 'dark' })
-    assert((await getTheme()).isDark, 'Dark appearance did not produce a dark theme')
+    assert(buildActiveThemeColors(await getTheme()).isDark, 'Dark appearance did not produce a dark theme')
     updateSetting({ 'theme.appearanceMode': 'auto' })
     checks.push('global light/dark appearance applies to themes')
     updateSetting({ 'theme.id': originalThemeId, 'theme.appearanceMode': originalAppearance })

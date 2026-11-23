@@ -350,6 +350,9 @@ RCT_EXPORT_MODULE(LXPipLyric)
     // 整块矩形先铺满，保证系统画中画的四个角不会露出黑色背景。
     CGContextSetFillColorWithColor(ctx, [glassColor colorWithAlphaComponent:glassAlpha].CGColor);
     CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
+    // 采样缓冲尚未上屏时，图层底色也用同一玻璃色兜底，避免启动/切换瞬间闪黑边。
+    self.displayLayer.backgroundColor = [glassColor colorWithAlphaComponent:glassAlpha].CGColor;
+    self.displayView.backgroundColor = [glassColor colorWithAlphaComponent:glassAlpha];
     // 内部圆角描边保留液态玻璃的层次，但不再裁掉四角。
     CGRect innerRect = CGRectInset(CGRectMake(0, 0, pointSize.width, pointSize.height), 1, 1);
     UIBezierPath *innerPath = [UIBezierPath bezierPathWithRoundedRect:innerRect cornerRadius:singleLine ? (height / 2.0 - 1.0) : 24.0];

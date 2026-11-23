@@ -120,7 +120,8 @@ export default memo(() => {
       }
       const folder = `${privateStorageDirectoryPath}/theme_images`
       try { await mkdir(folder) } catch {}
-      const target = `${folder}/glass-wallpaper.${extension}`
+      // 文件名带时间戳，避免同格式图片复用同一个 file:// 路径导致 React Native 图片缓存不刷新。
+      const target = `${folder}/glass-wallpaper-${Date.now()}.${extension}`
       if (wallpaper) await unlink(wallpaper)
       await moveFile(file.data, target)
       updateSetting({ 'theme.glassWallpaper': target })

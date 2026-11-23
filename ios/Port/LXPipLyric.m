@@ -186,7 +186,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
     if (self.configured == NO || self.pipController == nil) return;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
       if (self.pipController.isPictureInPictureActive) return;
-      if (self.pipController.isPictureInPicturePossible) [self.pipController startPictureInPicture];
+      [self.pipController startPictureInPicture];
     });
   }
 }
@@ -386,10 +386,6 @@ RCT_REMAP_METHOD(start, startWithResolver:(RCTPromiseResolveBlock)resolve reject
     [self updatePipContent];
     if (self.pipController.isPictureInPictureActive) {
       resolve(@YES);
-      return;
-    }
-    if (self.pipController.isPictureInPicturePossible == NO) {
-      resolve(@NO);
       return;
     }
     [self.pipController startPictureInPicture];

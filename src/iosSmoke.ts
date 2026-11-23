@@ -180,6 +180,40 @@ export const runSmokeTests = async() => {
     return
   }
   const uiScreen = NativeModules.UtilsModule.uiSmokeScreen as string | undefined
+  if (uiScreen === 'pip') {
+    const pip = NativeModules.LXPipLyric
+    let started = false
+    let supported = false
+    try {
+      const result = await pip.configure({
+        lines: [
+          { time: 0, text: '衣锦还乡心似箭' },
+          { time: 2, text: '要与马蹄争快' },
+          { time: 4, text: '第三行歌词' },
+        ],
+        position: 0,
+        isPlaying: true,
+        singleLine: false,
+        width: 100,
+        fontSize: 180,
+        offset: 0,
+        playedColor: '#31C27C',
+        unplayedColor: '#FFFFFF',
+      })
+      supported = !!result?.supported
+      await pause(600)
+      started = !!(await pip.start())
+      await pause(2600)
+    } catch (err) {
+      started = false
+    }
+    await RNFS.writeFile(reportPath, JSON.stringify({
+      status: 'passed',
+      checks: [`pip snapshot; supported=${supported}; start=${started}`],
+      screen: 'pip',
+    }))
+    return
+  }
   if (uiScreen) {
     // Dedicated UI snapshots: keep the screen stable so the runner can capture it.
     if (uiScreen === 'settings_detail' || uiScreen === 'settings_lyric') {

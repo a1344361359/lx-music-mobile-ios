@@ -74,9 +74,41 @@ const LIGHT_APPEARANCE = {
   'c-primary-font-active': 'rgb(0, 0, 0)',
 } as const
 
+const clampGlass = (value: number) => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 38)) / 100
+
+const makeGlassPalette = (isDark: boolean) => {
+  const t = clampGlass(settingState.setting['theme.glassTransparency'])
+  // 玻璃面板必须保持透光，不能沿用普通主题 0.9 左右的不透明底色。
+  const panelAlpha = (0.30 + (1 - t) * 0.22).toFixed(2)
+  const contentAlpha = (0.34 + (1 - t) * 0.22).toFixed(2)
+  const appAlpha = (0.26 + (1 - t) * 0.20).toFixed(2)
+  return isDark
+    ? {
+        'c-app-background': `rgba(7, 9, 16, ${appAlpha})`,
+        'c-main-background': `rgba(12, 15, 24, ${panelAlpha})`,
+        'c-content-background': `rgba(10, 13, 21, ${contentAlpha})`,
+        'c-border-background': 'rgba(255, 255, 255, 0.28)',
+        'c-font': 'rgb(247, 247, 250)',
+        'c-font-label': 'rgba(235, 235, 245, 0.68)',
+        'c-primary-font': 'rgb(240, 240, 246)',
+        'c-primary-font-active': 'rgb(255, 255, 255)',
+      }
+    : {
+        'c-app-background': `rgba(247, 248, 252, ${appAlpha})`,
+        'c-main-background': `rgba(255, 255, 255, ${panelAlpha})`,
+        'c-content-background': `rgba(250, 250, 255, ${contentAlpha})`,
+        'c-border-background': 'rgba(70, 72, 84, 0.22)',
+        'c-font': 'rgb(24, 25, 30)',
+        'c-font-label': 'rgba(48, 49, 58, 0.66)',
+        'c-primary-font': 'rgb(20, 21, 26)',
+        'c-primary-font-active': 'rgb(0, 0, 0)',
+      }
+}
+
 const applyAppearanceMode = (active: LX.ActiveTheme, originalIsDark: boolean, targetIsDark: boolean): LX.ActiveTheme => {
-  if (originalIsDark === targetIsDark) return { ...active, isDark: targetIsDark }
-  const palette = targetIsDark ? DARK_APPEARANCE : LIGHT_APPEARANCE
+  const isGlass = active.id === 'liquid_glass'
+  if (originalIsDark === targetIsDark && !isGlass) return { ...active, isDark: targetIsDark }
+  const palette = isGlass ? makeGlassPalette(targetIsDark) : targetIsDark ? DARK_APPEARANCE : LIGHT_APPEARANCE
   // 重建整套 accent/灰阶色板，避免只换背景与主文字后，序号、副标题等
   // 仍沿用原主题的浅色灰阶，在反色模式下看不清。
   const appearanceColors = createThemeColors(

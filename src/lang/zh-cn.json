@@ -565,5 +565,6 @@
   "setting_basic_font_size_150": "极大",
   "setting_basic_theme_wallpaper_none": "尚未选择照片",
   "setting_basic_theme_wallpaper_saved": "自定义壁纸已保存",
-  "setting_basic_theme_wallpaper_failed": "选择壁纸失败："
+  "setting_basic_theme_wallpaper_failed": "选择壁纸失败：",
+  "setting_lyric_desktop_pip_enable": "画中画歌词"
 }

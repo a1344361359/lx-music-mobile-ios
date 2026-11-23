@@ -47,6 +47,7 @@ const defaultSetting: LX.AppSetting = {
   'playDetail.isShowLyricProgressSetting': false,
 
   'desktopLyric.enable': false,
+  'desktopLyric.pipEnable': true,
   'desktopLyric.isLock': false,
   'desktopLyric.width': 100,
   'desktopLyric.pipWidth': 380,

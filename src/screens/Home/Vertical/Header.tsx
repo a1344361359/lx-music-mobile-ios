@@ -31,6 +31,7 @@ const LeftHeader = () => {
   const id = useNavActiveId()
   const t = useI18n()
   const statusBarHeight = useStatusbarHeight()
+  const isGlass = theme.id === 'liquid_glass'
 
   const openMenu = () => {
     global.app_event.changeMenuVisible(true)
@@ -41,6 +42,9 @@ const LeftHeader = () => {
       ...styles.container,
       height: scaleSizeH(HEADER_HEIGHT) + statusBarHeight,
       paddingTop: statusBarHeight,
+      backgroundColor: isGlass ? theme['c-main-background'] : undefined,
+      borderBottomWidth: isGlass ? 0.5 : 0,
+      borderBottomColor: theme['c-border-background'],
     }}>
       <View style={styles.left}>
         <TouchableOpacity style={styles.btn} onPress={openMenu}>
@@ -71,6 +75,7 @@ const RightHeader = () => {
   const t = useI18n()
   const id = useNavActiveId()
   const statusBarHeight = useStatusbarHeight()
+  const isGlass = theme.id === 'liquid_glass'
 
   const openMenu = () => {
     global.app_event.changeMenuVisible(true)
@@ -80,6 +85,9 @@ const RightHeader = () => {
       ...styles.container,
       height: scaleSizeH(HEADER_HEIGHT) + statusBarHeight,
       paddingTop: statusBarHeight,
+      backgroundColor: isGlass ? theme['c-main-background'] : undefined,
+      borderBottomWidth: isGlass ? 0.5 : 0,
+      borderBottomColor: theme['c-border-background'],
     }}>
       <View style={styles.left}>
         <TouchableOpacity style={styles.titleBtn} onPress={openMenu}>

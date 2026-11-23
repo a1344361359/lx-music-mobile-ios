@@ -5,6 +5,7 @@ import { useTheme } from '@/store/theme/hook'
 
 import Section from '../../components/Section'
 import IsShowLyric from './IsShowLyric'
+import IsShowPip from './IsShowPip'
 import IsLockLyric from './IsLockLyric'
 import IsShowToggleAnima from './IsShowToggleAnima'
 import IsSingleLine from './IsSingleLine'
@@ -17,6 +18,7 @@ import TextOpacity from './TextOpacity'
 import TextPositionX from './TextPositionX'
 import TextPositionY from './TextPositionY'
 import { useI18n } from '@/lang'
+import { useSettingValue } from '@/store/setting/hook'
 import Theme from './Theme'
 import LyricColors from './LyricColors'
 // import { useTranslation } from '@/plugins/i18n'
@@ -24,23 +26,29 @@ import LyricColors from './LyricColors'
 export default memo(() => {
   const t = useI18n()
   const theme = useTheme()
+  const pipEnabled = useSettingValue('desktopLyric.pipEnable')
 
   return (
     <Section title={t('setting_lyric_desktop')}>
       {Platform.OS === 'ios' && (
         <Text size={12} color={theme['c-font-label']} style={{ paddingHorizontal: 15, paddingBottom: 8, lineHeight: 18 }}>
-          iOS 版开启后会启动 QQ 音乐式系统画中画歌词条，可浮在其他 App 和桌面上；可自定义已播放/未播放歌词颜色。若未弹出，请确认系统设置中已允许“自动开启画中画”。
+          iOS 版桌面歌词与画中画歌词分开控制。画中画歌词会浮在其他 App 和桌面上，系统画中画按钮支持播放/暂停及前后 10 秒；若未弹出，请确认系统设置中已允许“自动开启画中画”。
         </Text>
       )}
+      {Platform.OS === 'ios' && <IsShowPip />}
       <IsShowLyric />
       {Platform.OS !== 'ios' && <IsLockLyric />}
       {Platform.OS !== 'ios' && <IsShowToggleAnima />}
-      <IsSingleLine />
-      <LyricOffset />
-      <Theme />
-      <LyricColors />
-      <TextSize />
-      {Platform.OS === 'ios' ? <PipSize /> : <ViewWidth />}
+      {pipEnabled && (
+        <>
+          <IsSingleLine />
+          <LyricOffset />
+          <Theme />
+          <LyricColors />
+          <TextSize />
+          {Platform.OS === 'ios' ? <PipSize /> : <ViewWidth />}
+        </>
+      )}
       {Platform.OS !== 'ios' && <MaxLineNum />}
       {Platform.OS !== 'ios' && <TextOpacity />}
       {Platform.OS !== 'ios' && <TextPositionX />}

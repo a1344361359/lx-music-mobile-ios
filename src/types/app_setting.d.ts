@@ -269,6 +269,7 @@ declare global {
        * 是否启用桌面歌词
        */
       'desktopLyric.enable': boolean
+      'desktopLyric.pipEnable': boolean
 
       /**
        * 是否锁定桌面歌词

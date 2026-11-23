@@ -83,6 +83,7 @@ export default memo(() => {
       />
       <Text size={11} color={theme['c-font-label']} style={styles.tip}>
         宽度/高度是系统画中画窗口的尺寸；透明度 0% 最实、100% 最透。调整后自动保存。
+        系统画中画控制按钮会直接控制本机播放：暂停/播放、前进 10 秒、后退 10 秒。
       </Text>
     </SubTitle>
   )

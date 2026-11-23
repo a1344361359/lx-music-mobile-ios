@@ -565,5 +565,6 @@
   "setting_basic_font_size_150": "Maximum",
   "setting_basic_theme_wallpaper_none": "No photo selected",
   "setting_basic_theme_wallpaper_saved": "Wallpaper saved",
-  "setting_basic_theme_wallpaper_failed": "Failed to pick wallpaper: "
+  "setting_basic_theme_wallpaper_failed": "Failed to pick wallpaper: ",
+  "setting_lyric_desktop_pip_enable": "Picture-in-picture lyrics"
 }

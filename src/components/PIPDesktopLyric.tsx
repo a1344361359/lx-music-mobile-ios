@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { AppState, NativeModules, Platform } from 'react-native'
+import { AppState, NativeEventEmitter, NativeModules, Platform } from 'react-native'
 import { useLrcSet } from '@/plugins/lyric'
 import { useIsPlay, useProgress } from '@/store/player/hook'
 import { useSettingValue } from '@/store/setting/hook'
@@ -27,7 +27,7 @@ interface PipState {
 // QQ 音乐式的系统画中画歌词：由原生 AVSampleBufferDisplayLayer 渲染，
 // 不再使用 react-native-video 的黑色视频 + WebVTT 方案。
 export default () => {
-  const enabled = useSettingValue('desktopLyric.enable')
+  const enabled = useSettingValue('desktopLyric.pipEnable')
   const lines = useLrcSet()
   const isPlay = useIsPlay()
   const progress = useProgress()
@@ -95,6 +95,20 @@ export default () => {
     const sub = AppState.addEventListener('change', onAppState)
     return () => { sub.remove() }
   }, [enabled])
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !LXPipLyric) return
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const emitter = new NativeEventEmitter(LXPipLyric)
+    const listener = emitter.addListener('LXPipLyricRemoteCommand', (event: { action?: string, position?: number }) => {
+      // 播放/暂停和跳转已经由原生直接控制 TrackPlayer；这里只把跳转后的
+      // 位置同步回界面，避免后台事件延迟导致二次跳转。
+      if (event.action === 'seek' && typeof event.position === 'number') {
+        global.app_event.setProgress(event.position)
+      }
+    })
+    return () => { listener.remove() }
+  }, [])
 
   useEffect(() => {
     if (Platform.OS !== 'ios' || !LXPipLyric) return

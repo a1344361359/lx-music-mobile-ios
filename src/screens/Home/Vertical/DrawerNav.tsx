@@ -63,8 +63,8 @@ const Header = () => {
   return (
     <View style={{ paddingTop: statusBarHeight, backgroundColor: theme['c-primary-light-700-alpha-500'] }}>
       <View style={styles.header}>
-        <Icon name="logo" color={theme['c-primary-dark-100-alpha-300']} size={28} />
-        <Text style={styles.headerText} size={28} color={theme['c-primary-dark-100-alpha-300']}>KMusic</Text>
+        <Icon name="logo" color={theme.id === 'liquid_glass' ? theme['c-font'] : theme['c-primary-dark-100-alpha-300']} size={28} />
+        <Text style={styles.headerText} size={28} color={theme.id === 'liquid_glass' ? theme['c-font'] : theme['c-primary-dark-100-alpha-300']}>KMusic</Text>
       </View>
     </View>
   )

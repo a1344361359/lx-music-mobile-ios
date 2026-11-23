@@ -28,7 +28,10 @@ export default ({ children }: Props) => {
   const wallpaperBlur = useSettingValue('theme.glassWallpaperBlur')
   const isGlass = theme.id === 'liquid_glass'
   const glassTint = isGlass
-    ? hexToRgba(glassColor, 0.05 + (1 - Math.max(0, Math.min(100, glassTransparency)) / 100) * 0.16)
+    ? hexToRgba(glassColor, 0.04 + (1 - Math.max(0, Math.min(100, glassTransparency)) / 100) * 0.12)
+    : undefined
+  const glassScrim = isGlass
+    ? (theme.isDark ? 'rgba(5, 7, 13, 0.28)' : 'rgba(248, 248, 252, 0.30)')
     : undefined
   const customWallpaperUri = customWallpaper
     ? (customWallpaper.startsWith('file://') ? customWallpaper : `file://${customWallpaper}`)
@@ -67,15 +70,22 @@ export default ({ children }: Props) => {
         resizeMode="cover"
         blurRadius={backgroundBlur}
       >
+        {isGlass ? <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: glassScrim }]} /> : null}
         {isGlass ? <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: glassTint }]} /> : null}
       </ImageBackground>
+      {isGlass ? (
+        <>
+          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 104, backgroundColor: theme['c-main-background'], borderBottomWidth: 0.5, borderBottomColor: theme['c-border-background'] }} />
+          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 90, backgroundColor: theme['c-main-background'], borderTopWidth: 0.5, borderTopColor: theme['c-border-background'] }} />
+        </>
+      ) : null}
       <ContentView style={{ flex: 1 }}>
         <FadeSlideIn duration={240} distance={6} style={{ flex: 1 }}>
           {children}
         </FadeSlideIn>
       </ContentView>
     </View>
-  ), [children, theme, backgroundSource, glassTint, isGlass, backgroundBlur])
+  ), [children, theme, backgroundSource, glassTint, glassScrim, isGlass, backgroundBlur])
   const picComponent = useMemo(() => {
     return (
       <View style={{ flex: 1, overflow: 'hidden' }}>

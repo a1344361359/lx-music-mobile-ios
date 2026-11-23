@@ -79,7 +79,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
 - (dispatch_queue_t)methodQueue { return dispatch_get_main_queue(); }
 
 - (NSArray<NSString *> *)supportedEvents {
-  return @[@"LXPipLyricStarted", @"LXPipLyricStopped", @"LXPipLyricFailed"];
+  return @[@"LXPipLyricStarted", @"LXPipLyricStopped", @"LXPipLyricFailed", @"LXPipLyricRemoteCommand"];
 }
 
 - (instancetype)init {
@@ -138,7 +138,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
   self.displayView = view;
   self.displayLayer = (AVSampleBufferDisplayLayer *)view.layer;
   // 让歌词画面铺满整个系统画中画窗口，避免上下或左右出现黑色留边。
-  self.displayLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+  self.displayLayer.videoGravity = AVLayerVideoGravityResize;
   self.displayLayer.opaque = NO;
   self.displayLayer.backgroundColor = UIColor.clearColor.CGColor;
   CMTimebaseRef timebase = NULL;
@@ -258,7 +258,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
     AVPictureInPictureController *controller = [[AVPictureInPictureController alloc] initWithContentSource:source];
     controller.delegate = self;
     controller.canStartPictureInPictureAutomaticallyFromInline = YES;
-    controller.requiresLinearPlayback = YES;
+    controller.requiresLinearPlayback = NO;
     self.pipController = controller;
     self.configured = YES;
     [self ensureTickTimer];
@@ -319,12 +319,12 @@ RCT_EXPORT_MODULE(LXPipLyric)
   if (heightValue == nil && !singleLine) height = 92.0;
   if (!singleLine) height = MAX(height, 72.0);
   CGFloat cornerRadius = singleLine ? height / 2.0 : 24.0;
-  // 系统画中画取的是 displayLayer 的画面，图层本身也要裁圆角，
-  // 否则即便绘制内容有圆角，窗口四角仍会被玻璃底色填成直角。
-  self.displayLayer.cornerRadius = cornerRadius;
-  self.displayLayer.masksToBounds = YES;
-  self.displayView.layer.cornerRadius = cornerRadius;
-  self.displayView.layer.masksToBounds = YES;
+  // 不在图层上裁圆角：系统画中画窗口自己会做圆角，二次裁切会让
+  // 四角出现被切掉的黑边。画面铺满整个窗口，四角由系统窗口裁切。
+  self.displayLayer.cornerRadius = 0;
+  self.displayLayer.masksToBounds = NO;
+  self.displayView.layer.cornerRadius = 0;
+  self.displayView.layer.masksToBounds = NO;
   CGSize pointSize = CGSizeMake(width, height);
   if (self.displayView.superview != nil) {
     CGFloat superHeight = self.displayView.superview.bounds.size.height;
@@ -355,11 +355,9 @@ RCT_EXPORT_MODULE(LXPipLyric)
     [[UIColor clearColor] setFill];
     CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
 
-    // 整块玻璃按圆角路径铺满，四角保持透明，系统画中画窗口才不会露出直角底色。
-    UIBezierPath *glassPath = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, pointSize.width, pointSize.height) cornerRadius:cornerRadius];
+    // 铺满整块画面，连四角也一起填充；系统画中画窗口负责外轮廓圆角。
     CGContextSetFillColorWithColor(ctx, [glassColor colorWithAlphaComponent:glassAlpha].CGColor);
-    CGContextAddPath(ctx, glassPath.CGPath);
-    CGContextFillPath(ctx);
+    CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
     // 采样缓冲尚未上屏时，图层底色也用同一玻璃色兜底，避免启动/切换瞬间闪黑边。
     self.displayLayer.backgroundColor = [glassColor colorWithAlphaComponent:glassAlpha].CGColor;
     self.displayView.backgroundColor = UIColor.clearColor;
@@ -533,6 +531,46 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
   resolve(nil);
 }
 
+#pragma mark - TrackPlayer bridge
+
+- (void)invokeTrackPlayerNoArgument:(NSString *)selectorName {
+  id module = [self.bridge moduleForName:@"TrackPlayerModule"];
+  SEL selector = NSSelectorFromString(selectorName);
+  if (module == nil || ![module respondsToSelector:selector]) return;
+  NSMethodSignature *signature = [module methodSignatureForSelector:selector];
+  if (signature == nil) return;
+  NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+  invocation.target = module;
+  invocation.selector = selector;
+  RCTPromiseResolveBlock resolve = ^(id result) {};
+  RCTPromiseRejectBlock reject = ^(NSString *code, NSString *message, NSError *error) {};
+  [invocation setArgument:&resolve atIndex:2];
+  [invocation setArgument:&reject atIndex:3];
+  @try { [invocation invoke]; } @catch (NSException *exception) {
+    NSLog(@"[LXPipLyric] invoke %@ failed: %@", selectorName, exception);
+  }
+}
+
+- (void)invokeTrackPlayerSeekTo:(double)time {
+  id module = [self.bridge moduleForName:@"TrackPlayerModule"];
+  SEL selector = NSSelectorFromString(@"seekTo:resolver:rejecter:");
+  if (module == nil || ![module respondsToSelector:selector]) return;
+  NSMethodSignature *signature = [module methodSignatureForSelector:selector];
+  if (signature == nil) return;
+  NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+  invocation.target = module;
+  invocation.selector = selector;
+  double target = time;
+  RCTPromiseResolveBlock resolve = ^(id result) {};
+  RCTPromiseRejectBlock reject = ^(NSString *code, NSString *message, NSError *error) {};
+  [invocation setArgument:&target atIndex:2];
+  [invocation setArgument:&resolve atIndex:3];
+  [invocation setArgument:&reject atIndex:4];
+  @try { [invocation invoke]; } @catch (NSException *exception) {
+    NSLog(@"[LXPipLyric] seekTo failed: %@", exception);
+  }
+}
+
 #pragma mark - AVPictureInPictureControllerDelegate
 
 - (void)pictureInPictureControllerDidStartPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
@@ -557,12 +595,26 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
 #pragma mark - AVPictureInPictureSampleBufferPlaybackDelegate
 
 - (void)pictureInPictureController:(AVPictureInPictureController *)pictureInPictureController setPlaying:(BOOL)playing {
-  self.playing = playing;
+  // 画中画在后台时 JS 可能被挂起，必须直接调用原生播放器，不能只发事件。
   self.basePosition = [self currentPosition];
   self.basePositionTime = CACurrentMediaTime();
+  self.playing = playing;
+  [self invokeTrackPlayerNoArgument:playing ? @"play:rejecter:" : @"pause:rejecter:"];
+  [self renderCurrentFrame];
 }
 
 - (void)pictureInPictureController:(AVPictureInPictureController *)pictureInPictureController skipByInterval:(CMTime)skipInterval completionHandler:(void (^)(void))completionHandler {
+  double seconds = CMTimeGetSeconds(skipInterval);
+  if (isfinite(seconds) && seconds != 0) {
+    seconds = seconds > 0 ? 10 : -10;
+    double target = MAX(0, [self currentPosition] + seconds);
+    self.basePosition = target;
+    self.basePositionTime = CACurrentMediaTime();
+    self.lastLineIndex = -1;
+    [self renderCurrentFrame];
+    [self invokeTrackPlayerSeekTo:target];
+    [self sendEventWithName:@"LXPipLyricRemoteCommand" body:@{@"action": @"seek", @"position": @(target)}];
+  }
   if (completionHandler) completionHandler();
 }
 

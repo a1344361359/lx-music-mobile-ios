@@ -4,6 +4,8 @@ import { Platform } from 'react-native'
 import DrawerNav from './DrawerNav'
 import Header from './Header'
 import Main from './Main'
+import PlayerBar from '@/components/player/PlayerBar'
+import TabBar from './TabBar'
 import { useSettingValue } from '@/store/setting/hook'
 import { COMPONENT_IDS } from '@/config/constant'
 import DrawerLayoutFixed, { type DrawerLayoutFixedType } from '@/components/common/DrawerLayoutFixed'
@@ -51,6 +53,8 @@ const Content = () => {
     >
       {hideHeader ? <StatusBar /> : <Header />}
       <Main />
+      <PlayerBar isHome />
+      <TabBar />
       {/* <View style={styles.container}>
       </View> */}
     </DrawerLayoutFixed>

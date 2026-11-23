@@ -10,6 +10,7 @@ import IsShowToggleAnima from './IsShowToggleAnima'
 import IsSingleLine from './IsSingleLine'
 import TextSize from './TextSize'
 import ViewWidth from './ViewWidth'
+import PipSize from './PipSize'
 import LyricOffset from './LyricOffset'
 import MaxLineNum from './MaxLineNum'
 import TextOpacity from './TextOpacity'
@@ -39,7 +40,7 @@ export default memo(() => {
       <Theme />
       <LyricColors />
       <TextSize />
-      <ViewWidth />
+      {Platform.OS === 'ios' ? <PipSize /> : <ViewWidth />}
       {Platform.OS !== 'ios' && <MaxLineNum />}
       {Platform.OS !== 'ios' && <TextOpacity />}
       {Platform.OS !== 'ios' && <TextPositionX />}

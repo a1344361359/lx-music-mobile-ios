@@ -136,7 +136,8 @@ RCT_EXPORT_MODULE(LXPipLyric)
   view.backgroundColor = UIColor.clearColor;
   self.displayView = view;
   self.displayLayer = (AVSampleBufferDisplayLayer *)view.layer;
-  self.displayLayer.videoGravity = AVLayerVideoGravityResize;
+  // 让歌词画面铺满整个系统画中画窗口，避免上下或左右出现黑色留边。
+  self.displayLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
   self.displayLayer.opaque = NO;
   self.displayLayer.backgroundColor = UIColor.clearColor.CGColor;
   CMTimebaseRef timebase = NULL;
@@ -310,11 +311,12 @@ RCT_EXPORT_MODULE(LXPipLyric)
 - (void)renderCurrentFrame {
   if (self.displayLayer == nil || self.lyricState == nil) return;
   BOOL singleLine = [self.lyricState[@"singleLine"] boolValue];
-  NSNumber *widthValue = self.lyricState[@"width"];
-  CGFloat widthPercent = widthValue != nil ? MAX(10.0, MIN(100.0, widthValue.doubleValue)) : 100.0;
-  // 按参考图做成横向液态玻璃条：默认 100% 宽约 396pt。
-  CGFloat width = 248.0 + (widthPercent / 100.0) * 148.0;
-  CGFloat height = singleLine ? 58.0 : 92.0;
+  NSNumber *widthValue = self.lyricState[@"pipWidth"];
+  NSNumber *heightValue = self.lyricState[@"pipHeight"];
+  CGFloat width = widthValue != nil ? MAX(220.0, MIN(500.0, widthValue.doubleValue)) : 380.0;
+  CGFloat height = heightValue != nil ? MAX(40.0, MIN(200.0, heightValue.doubleValue)) : 58.0;
+  if (heightValue == nil && !singleLine) height = 92.0;
+  if (!singleLine) height = MAX(height, 72.0);
   CGSize pointSize = CGSizeMake(width, height);
   if (self.displayView.superview != nil) {
     CGFloat superHeight = self.displayView.superview.bounds.size.height;
@@ -330,10 +332,11 @@ RCT_EXPORT_MODULE(LXPipLyric)
   CGFloat fontBase = fontValue != nil ? MAX(12.0, MIN(24.0, fontValue.doubleValue / 12.0)) : 15.0;
   if (singleLine) fontBase = MAX(14.0, MIN(23.0, fontBase + 1.0));
 
-  NSNumber *transparencyValue = self.lyricState[@"glassTransparency"];
-  CGFloat glassTransparency = transparencyValue != nil ? MAX(0, MIN(100, transparencyValue.doubleValue)) / 100.0 : 0.38;
+  NSNumber *opacityValue = self.lyricState[@"pipOpacity"];
+  CGFloat pipOpacity = opacityValue != nil ? MAX(0, MIN(100, opacityValue.doubleValue)) / 100.0 : 0.55;
   UIColor *glassColor = LXColorFromSetting(self.lyricState[@"glassColor"], [UIColor colorWithRed:184.0 / 255.0 green:174.0 / 255.0 blue:201.0 / 255.0 alpha:1.0]);
-  CGFloat glassAlpha = 0.20 + (1.0 - glassTransparency) * 0.40;
+  // 0% 最实（接近不透明），100% 最透。
+  CGFloat glassAlpha = 0.95 - pipOpacity * 0.80;
 
   UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat defaultFormat];
   format.scale = 3.0;
@@ -344,17 +347,15 @@ RCT_EXPORT_MODULE(LXPipLyric)
     [[UIColor clearColor] setFill];
     CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
 
-    CGRect barRect = CGRectInset(CGRectMake(0, 0, pointSize.width, pointSize.height), 1, 1);
-    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:barRect cornerRadius:singleLine ? (height / 2.0 - 1.0) : 24.0];
-    [[glassColor colorWithAlphaComponent:glassAlpha] setFill];
-    [path fill];
-    // 玻璃上沿的一层白色高光，让半透明条更像液态玻璃。
-    UIBezierPath *highlight = [UIBezierPath bezierPathWithRoundedRect:CGRectInset(barRect, 1, 1) cornerRadius:singleLine ? (height / 2.0 - 2.0) : 23.0];
-    [[UIColor colorWithWhite:1.0 alpha:0.10] setFill];
-    [highlight fill];
-    [[UIColor colorWithWhite:1.0 alpha:0.22] setStroke];
-    path.lineWidth = 0.7;
-    [path stroke];
+    // 整块矩形先铺满，保证系统画中画的四个角不会露出黑色背景。
+    CGContextSetFillColorWithColor(ctx, [glassColor colorWithAlphaComponent:glassAlpha].CGColor);
+    CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
+    // 内部圆角描边保留液态玻璃的层次，但不再裁掉四角。
+    CGRect innerRect = CGRectInset(CGRectMake(0, 0, pointSize.width, pointSize.height), 1, 1);
+    UIBezierPath *innerPath = [UIBezierPath bezierPathWithRoundedRect:innerRect cornerRadius:singleLine ? (height / 2.0 - 1.0) : 24.0];
+    [[UIColor colorWithWhite:1.0 alpha:0.20] setStroke];
+    innerPath.lineWidth = 0.7;
+    [innerPath stroke];
 
     NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
     paragraph.lineBreakMode = NSLineBreakByTruncatingTail;

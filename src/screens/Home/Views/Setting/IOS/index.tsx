@@ -10,7 +10,7 @@ import { type SettingScreenIds } from '../Main'
 import { UIScaleContext } from '@/components/common/UIScaleContext'
 import Detail from './Detail'
 
-const DETAIL_SCALE = 1.5
+const DETAIL_SCALE = 1.05
 
 const GROUPS: Array<{ title: string, ids: SettingScreenIds[] }> = [
   { title: '常用', ids: ['basic', 'player', 'lyric_desktop'] },
@@ -154,8 +154,8 @@ const styles = createStyle({
     fontWeight: '600',
   },
   detailContent: {
-    paddingTop: 18,
-    paddingBottom: 30,
+    paddingTop: 22,
+    paddingBottom: 36,
   },
   footer: {
     textAlign: 'center',

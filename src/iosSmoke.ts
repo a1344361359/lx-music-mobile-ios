@@ -219,9 +219,23 @@ export const runSmokeTests = async() => {
   if (uiScreen === 'glass') {
     updateSetting({ 'theme.id': 'liquid_glass' })
     await getTheme().then(applyTheme)
+    let nowPlaying = false
+    try {
+      await NativeModules.LXNowPlaying?.update({
+        title: 'KMusic Smoke',
+        artist: 'KMusic',
+        duration: 180,
+        elapsedTime: 30,
+        playbackRate: 1,
+        isPlaying: true,
+      })
+      nowPlaying = !!NativeModules.LXNowPlaying
+    } catch (err) {
+      nowPlaying = false
+    }
     setNavActiveId('nav_setting')
     await pause(1800)
-    await RNFS.writeFile(reportPath, JSON.stringify({ status: 'passed', checks: ['liquid glass theme snapshot'], screen: 'glass' }))
+    await RNFS.writeFile(reportPath, JSON.stringify({ status: 'passed', checks: [`liquid glass theme snapshot; nowplaying=${nowPlaying}`], screen: 'glass' }))
     return
   }
   if (uiScreen) {

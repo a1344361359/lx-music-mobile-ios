@@ -8,6 +8,7 @@ import BackgroundTimer from 'react-native-background-timer'
 import playerState from '@/store/player/state'
 import settingState from '@/store/setting/state'
 import { onScreenStateChange } from '@/utils/nativeModules/utils'
+import { updateNowPlaying } from '@/utils/nativeModules/nowPlaying'
 import { AppState } from 'react-native'
 
 const delaySavePlayInfo = throttleBackgroundTimer(() => {
@@ -26,11 +27,21 @@ export default () => {
 
   let isScreenOn = true
 
+  const syncSystemProgress = (time: number, maxTime = playerState.progress.maxPlayTime, playing = playerState.isPlay) => {
+    void updateNowPlaying({
+      duration: maxTime,
+      elapsedTime: time,
+      playbackRate: playing ? 1 : 0,
+      isPlaying: playing,
+    })
+  }
+
   const getCurrentTime = () => {
     let id = playerState.musicInfo.id
     void getPosition().then(position => {
       if (!position || id != playerState.musicInfo.id) return
       setNowPlayTime(position)
+      syncSystemProgress(position)
       if (!playerState.isPlay) return
 
       if (settingState.setting['player.isSavePlayTime'] && !playerState.playMusicInfo.isTempPlay && isScreenOn) {
@@ -75,20 +86,22 @@ export default () => {
     // console.log('setProgress', time, maxTime)
     setNowPlayTime(time)
     void setCurrentTime(time)
-
     if (maxTime != null) setMaxplayTime(maxTime)
+    syncSystemProgress(time, maxTime ?? playerState.progress.maxPlayTime, playerState.isPlay)
 
     // if (!isPlay) audio.play()
   }
 
 
   const handlePlay = () => {
-    void getMaxTime()
+    void getMaxTime().then(() => { syncSystemProgress(playerState.progress.nowPlayTime, playerState.progress.maxPlayTime, true) })
+    syncSystemProgress(playerState.progress.nowPlayTime, playerState.progress.maxPlayTime, true)
     // prevProgressStatus = 'normal'
     // handleSetTaskBarState(playProgress.progress, prevProgressStatus)
     startUpdateTimeout()
   }
   const handlePause = () => {
+    syncSystemProgress(playerState.progress.nowPlayTime, playerState.progress.maxPlayTime, false)
     // prevProgressStatus = 'paused'
     // handleSetTaskBarState(playProgress.progress, prevProgressStatus)
     // clearBufferTimeout()

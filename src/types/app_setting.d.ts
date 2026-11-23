@@ -87,6 +87,7 @@ declare global {
       'theme.kmusicAccentColor': string
       'theme.glassColor': string
       'theme.glassTransparency': number
+      'theme.glassWallpaper': string
 
       /**
        * 亮色主题id
@@ -267,6 +268,9 @@ declare global {
        * 桌面歌词窗口宽度
        */
       'desktopLyric.width': number
+      'desktopLyric.pipWidth': number
+      'desktopLyric.pipHeight': number
+      'desktopLyric.pipOpacity': number
 
       /**
        * 歌词时间偏移，单位毫秒；负值提前，正值延后

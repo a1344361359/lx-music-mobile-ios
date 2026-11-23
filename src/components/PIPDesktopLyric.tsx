@@ -19,6 +19,9 @@ interface PipState {
   unplayedColor: string
   glassColor: string
   glassTransparency: number
+  pipWidth: number
+  pipHeight: number
+  pipOpacity: number
 }
 
 // QQ 音乐式的系统画中画歌词：由原生 AVSampleBufferDisplayLayer 渲染，
@@ -30,6 +33,9 @@ export default () => {
   const progress = useProgress()
   const singleLine = useSettingValue('desktopLyric.isSingleLine')
   const width = useSettingValue('desktopLyric.width')
+  const pipWidth = useSettingValue('desktopLyric.pipWidth')
+  const pipHeight = useSettingValue('desktopLyric.pipHeight')
+  const pipOpacity = useSettingValue('desktopLyric.pipOpacity')
   const fontSize = useSettingValue('desktopLyric.style.fontSize')
   const lyricOffset = useSettingValue('desktopLyric.lyricOffset')
   const playedColor = useSettingValue('desktopLyric.style.lyricPlayedColor')
@@ -53,6 +59,9 @@ export default () => {
     unplayedColor,
     glassColor,
     glassTransparency,
+    pipWidth,
+    pipHeight,
+    pipOpacity,
   })
 
   useEffect(() => {
@@ -75,7 +84,7 @@ export default () => {
       void LXPipLyric.update(state)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, lines, isPlay, progress.nowPlayTime, singleLine, width, fontSize, lyricOffset, playedColor, unplayedColor, glassColor, glassTransparency])
+  }, [enabled, lines, isPlay, progress.nowPlayTime, singleLine, width, fontSize, lyricOffset, playedColor, unplayedColor, glassColor, glassTransparency, pipWidth, pipHeight, pipOpacity])
 
   useEffect(() => {
     if (Platform.OS !== 'ios' || !LXPipLyric) return

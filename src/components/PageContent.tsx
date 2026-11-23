@@ -24,10 +24,14 @@ export default ({ children }: Props) => {
   const pic = useBgPic()
   const glassColor = useSettingValue('theme.glassColor')
   const glassTransparency = useSettingValue('theme.glassTransparency')
+  const glassWallpaper = useSettingValue('theme.glassWallpaper')
   const isGlass = theme.id === 'liquid_glass'
   const glassTint = isGlass
     ? hexToRgba(glassColor, 0.05 + (1 - Math.max(0, Math.min(100, glassTransparency)) / 100) * 0.16)
     : undefined
+  const backgroundSource = useMemo(() => isGlass && glassWallpaper
+    ? { uri: glassWallpaper.startsWith('file://') ? glassWallpaper : `file://${glassWallpaper}` }
+    : theme['bg-image'], [glassWallpaper, isGlass, theme])
   // const [wh, setWH] = useState<{ width: number | string, height: number | string }>({ width: '100%', height: Dimensions.get('screen').height })
 
   // 固定宽高度 防止弹窗键盘时大小改变导致背景被缩放
@@ -52,7 +56,7 @@ export default ({ children }: Props) => {
     <View style={{ flex: 1, overflow: 'hidden' }}>
       <ImageBackground
         style={{ position: 'absolute', left: 0, top: 0, height: windowSize.height, width: windowSize.width, backgroundColor: theme['c-content-background'] }}
-        source={theme['bg-image']}
+        source={backgroundSource}
         resizeMode="cover"
         blurRadius={isGlass ? 10 : 0}
       >
@@ -62,7 +66,7 @@ export default ({ children }: Props) => {
         {children}
       </View>
     </View>
-  ), [children, theme, glassTint, isGlass, windowSize.height, windowSize.width])
+  ), [children, theme, backgroundSource, glassTint, isGlass, windowSize.height, windowSize.width])
   const picComponent = useMemo(() => {
     return (
       <View style={{ flex: 1, overflow: 'hidden' }}>

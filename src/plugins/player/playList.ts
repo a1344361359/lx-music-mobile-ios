@@ -6,6 +6,7 @@ import { defaultUrl } from '@/config'
 import settingState from '@/store/setting/state'
 import playerState from '@/store/player/state'
 import { syncLiveActivity } from '@/core/liveActivity'
+import { updateNowPlaying } from '@/utils/nativeModules/nowPlaying'
 
 
 const list: LX.Player.Track[] = []
@@ -235,6 +236,19 @@ const updateMetaInfo = async(mInfo: LX.Player.MusicInfo) => {
     duration: state.prevDuration || 0,
     lyric: getCurrentFullLyric(mInfo.id),
   }, state.isPlaying)
+
+  // 直接把同一份信息写进 MPNowPlayingInfoCenter，补齐 iOS 26 正在播放卡片需要的
+  // 播放状态、总时长和当前进度；否则系统卡片可能一直显示“未在播放”。
+  void updateNowPlaying({
+    title,
+    artist,
+    album: mInfo.album ?? undefined,
+    artwork,
+    duration: state.prevDuration > 0 ? state.prevDuration : playerState.progress.maxPlayTime,
+    elapsedTime: playerState.progress.nowPlayTime,
+    playbackRate: state.isPlaying ? 1 : 0,
+    isPlaying: state.isPlaying,
+  })
 
   // 锁屏已经更新成这首歌之后，再让灵动岛使用同一份 mInfo 同步一次，
   // 避免两处更新来源不同导致“当前歌曲”和锁屏歌曲对不上。

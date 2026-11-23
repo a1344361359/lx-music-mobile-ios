@@ -44,108 +44,20 @@ static UIColor *LXColorFromSetting(NSString *value, UIColor *fallback) {
   return fallback;
 }
 
-@interface LXLyricPipView : UIView
-@property (nonatomic, copy) NSString *currentText;
-@property (nonatomic, copy) NSString *nextText;
-@property (nonatomic, strong) UIColor *playedColor;
-@property (nonatomic, strong) UIColor *unplayedColor;
-@property (nonatomic, assign) BOOL singleLine;
-@property (nonatomic, assign) CGFloat fontBase;
+@interface LXSampleBufferView : UIView
 @end
 
-@implementation LXLyricPipView
-- (instancetype)initWithFrame:(CGRect)frame {
-  if (self = [super initWithFrame:frame]) {
-    self.backgroundColor = UIColor.clearColor;
-    self.opaque = NO;
-    self.contentMode = UIViewContentModeRedraw;
-    self.clipsToBounds = YES;
-    _playedColor = UIColor.whiteColor;
-    _unplayedColor = [UIColor colorWithWhite:0.78 alpha:1.0];
-    _fontBase = 15.0;
-  }
-  return self;
-}
-
-- (void)setCurrentText:(NSString *)currentText {
-  _currentText = [currentText copy];
-  [self setNeedsDisplay];
-}
-
-- (void)setNextText:(NSString *)nextText {
-  _nextText = [nextText copy];
-  [self setNeedsDisplay];
-}
-
-- (void)drawRect:(CGRect)rect {
-  CGContextRef ctx = UIGraphicsGetCurrentContext();
-  if (ctx == NULL) return;
-  CGFloat width = CGRectGetWidth(self.bounds);
-  CGFloat height = CGRectGetHeight(self.bounds);
-  if (width <= 1 || height <= 1) return;
-
-  CGContextClearRect(ctx, CGRectMake(0, 0, width, height));
-  CGFloat radius = self.singleLine ? MAX(2.0, height / 2.0 - 1.0) : 18.0;
-  CGRect barRect = CGRectInset(CGRectMake(0, 0, width, height), 1, 1);
-  UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:barRect cornerRadius:radius];
-  [[UIColor colorWithWhite:0.055 alpha:0.96] setFill];
-  [path fill];
-  [[UIColor colorWithWhite:1.0 alpha:0.16] setStroke];
-  path.lineWidth = 1.0;
-  [path stroke];
-
-  NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
-  paragraph.lineBreakMode = NSLineBreakByTruncatingTail;
-  paragraph.alignment = NSTextAlignmentLeft;
-  CGFloat currentSize = self.singleLine ? MAX(13.0, MIN(22.0, self.fontBase)) : MAX(12.0, MIN(22.0, self.fontBase));
-  CGFloat nextSize = MAX(11.0, currentSize - 3.0);
-  NSDictionary *currentAttributes = @{
-    NSFontAttributeName: [UIFont systemFontOfSize:currentSize weight:UIFontWeightSemibold],
-    NSForegroundColorAttributeName: self.playedColor,
-    NSParagraphStyleAttributeName: paragraph,
-  };
-  NSDictionary *nextAttributes = @{
-    NSFontAttributeName: [UIFont systemFontOfSize:nextSize weight:UIFontWeightRegular],
-    NSForegroundColorAttributeName: self.unplayedColor,
-    NSParagraphStyleAttributeName: paragraph,
-  };
-
-  NSString *current = self.currentText.length > 0 ? self.currentText : @" ";
-  NSString *next = self.nextText.length > 0 ? self.nextText : @" ";
-  CGFloat textWidth = MAX(20.0, width - 70.0);
-  if (self.singleLine) {
-    UIFont *font = [UIFont systemFontOfSize:currentSize weight:UIFontWeightSemibold];
-    CGFloat textHeight = font.lineHeight + 2.0;
-    CGFloat y = MAX(2.0, (height - textHeight) / 2.0);
-    [current drawWithRect:CGRectMake(22.0, y, textWidth, textHeight)
-                  options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
-               attributes:currentAttributes
-                  context:nil];
-  } else {
-    [current drawWithRect:CGRectMake(22.0, 8.0, textWidth, nextSize + 5.0)
-                  options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
-               attributes:currentAttributes
-                  context:nil];
-    [next drawWithRect:CGRectMake(22.0, 36.0, textWidth, nextSize + 5.0)
-               options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
-            attributes:nextAttributes
-               context:nil];
-  }
-
-  UIImage *note = [UIImage systemImageNamed:@"music.note"];
-  if (note != nil) {
-    note = [note imageWithTintColor:[UIColor colorWithWhite:1.0 alpha:0.9] renderingMode:UIImageRenderingModeAlwaysOriginal];
-    [note drawInRect:CGRectMake(width - 38.0, (height - 16.0) / 2.0, 16.0, 16.0)];
-  }
+@implementation LXSampleBufferView
++ (Class)layerClass {
+  return [AVSampleBufferDisplayLayer class];
 }
 @end
 
 API_AVAILABLE(ios(15.0))
 @interface LXPipLyricModule : RCTEventEmitter <RCTBridgeModule, AVPictureInPictureControllerDelegate, AVPictureInPictureSampleBufferPlaybackDelegate>
 @property (nonatomic, strong) AVPictureInPictureController *pipController;
-@property (nonatomic, strong) AVPictureInPictureVideoCallViewController *pipViewController;
-@property (nonatomic, strong) UIView *sourceView;
-@property (nonatomic, strong) LXLyricPipView *lyricView;
+@property (nonatomic, strong) AVSampleBufferDisplayLayer *displayLayer;
+@property (nonatomic, strong) UIView *displayView;
 @property (nonatomic, strong) NSTimer *tickTimer;
 @property (nonatomic, strong) NSDictionary *lyricState;
 @property (nonatomic, assign) BOOL configured;
@@ -186,7 +98,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
     if (self.configured == NO || self.pipController == nil) return;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
       if (self.pipController.isPictureInPictureActive) return;
-      [self.pipController startPictureInPicture];
+      if (self.pipController.isPictureInPicturePossible) [self.pipController startPictureInPicture];
     });
   }
 }
@@ -207,27 +119,30 @@ RCT_EXPORT_MODULE(LXPipLyric)
   return app.windows.firstObject;
 }
 
-- (void)setupPipContentIfNeeded {
+- (void)attachDisplayViewIfNeeded {
+  if (self.displayView != nil) return;
   UIWindow *window = [self keyWindow];
   if (window == nil) return;
-  if (self.sourceView == nil) {
-    self.sourceView = [[UIView alloc] initWithFrame:CGRectMake(0, MAX(0, window.bounds.size.height - 36.0), 160, 36)];
-    self.sourceView.backgroundColor = UIColor.clearColor;
-    self.sourceView.userInteractionEnabled = NO;
-    [window.rootViewController.view addSubview:self.sourceView];
+  LXSampleBufferView *view = [[LXSampleBufferView alloc] initWithFrame:CGRectMake(0, window.bounds.size.height - 36.0, 160, 36)];
+  view.alpha = 1.0;
+  view.userInteractionEnabled = NO;
+  view.clipsToBounds = YES;
+  view.backgroundColor = UIColor.clearColor;
+  self.displayView = view;
+  self.displayLayer = (AVSampleBufferDisplayLayer *)view.layer;
+  self.displayLayer.videoGravity = AVLayerVideoGravityResize;
+  self.displayLayer.opaque = NO;
+  self.displayLayer.backgroundColor = UIColor.clearColor.CGColor;
+  CMTimebaseRef timebase = NULL;
+  CMTimebaseCreateWithMasterClock(kCFAllocatorDefault, CMClockGetHostTimeClock(), &timebase);
+  if (timebase != NULL) {
+    CMTimebaseSetTime(timebase, kCMTimeZero);
+    CMTimebaseSetRate(timebase, 1.0);
+    self.displayLayer.controlTimebase = timebase;
+    CFRelease(timebase);
   }
-  if (@available(iOS 15.0, *)) {
-    if (self.pipViewController == nil) {
-      AVPictureInPictureVideoCallViewController *controller = [[AVPictureInPictureVideoCallViewController alloc] init];
-      controller.view.backgroundColor = UIColor.clearColor;
-      controller.preferredContentSize = CGSizeMake(198.0, 68.0);
-      LXLyricPipView *lyricView = [[LXLyricPipView alloc] initWithFrame:CGRectMake(0, 0, 198.0, 68.0)];
-      lyricView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-      [controller.view addSubview:lyricView];
-      self.pipViewController = controller;
-      self.lyricView = lyricView;
-    }
-  }
+  // 放在最底层，不遮挡正常界面，但保留在窗口层级中供系统画中画取源。
+  [window.rootViewController.view insertSubview:view atIndex:0];
 }
 
 - (NSArray<NSDictionary *> *)lines {
@@ -256,46 +171,6 @@ RCT_EXPORT_MODULE(LXPipLyric)
   return current;
 }
 
-- (NSDictionary *)currentAndNextText {
-  NSArray<NSDictionary *> *lines = [self lines];
-  NSInteger index = [self currentLineIndexForPosition:[self currentPosition]];
-  if (lines.count == 0 || index < 0) {
-    return @{@"current": self.lyricState[@"currentText"] ?: @"", @"next": self.lyricState[@"nextText"] ?: @""};
-  }
-  NSDictionary *line = lines[index];
-  NSString *current = line[@"text"] ?: @"";
-  NSString *next = @"";
-  if (index + 1 < lines.count) next = lines[index + 1][@"text"] ?: @"";
-  if (current.length == 0 && index + 1 < lines.count) {
-    current = next;
-    next = index + 2 < lines.count ? (lines[index + 2][@"text"] ?: @"") : @"";
-  }
-  return @{@"current": current, @"next": next};
-}
-
-- (void)updatePipContent {
-  if (self.lyricView == nil || self.lyricState == nil) return;
-  BOOL singleLine = [self.lyricState[@"singleLine"] boolValue];
-  NSNumber *widthValue = self.lyricState[@"width"];
-  CGFloat widthPercent = widthValue != nil ? MAX(10.0, MIN(100.0, widthValue.doubleValue)) : 100.0;
-  CGFloat width = (248.0 + (widthPercent / 100.0) * 148.0) * 0.5;
-  CGFloat height = singleLine ? 36.0 : 68.0;
-  if (self.pipViewController != nil) {
-    self.pipViewController.preferredContentSize = CGSizeMake(width, height);
-    self.lyricView.frame = CGRectMake(0, 0, width, height);
-  }
-  self.lyricView.singleLine = singleLine;
-  NSNumber *fontValue = self.lyricState[@"fontSize"];
-  CGFloat fontBase = fontValue != nil ? MAX(12.0, MIN(24.0, fontValue.doubleValue / 12.0)) : 15.0;
-  self.lyricView.fontBase = fontBase;
-  self.lyricView.playedColor = LXColorFromSetting(self.lyricState[@"playedColor"], UIColor.whiteColor);
-  self.lyricView.unplayedColor = LXColorFromSetting(self.lyricState[@"unplayedColor"], [UIColor colorWithWhite:0.78 alpha:1.0]);
-  NSDictionary *texts = [self currentAndNextText];
-  self.lyricView.currentText = texts[@"current"];
-  self.lyricView.nextText = texts[@"next"];
-  [self.lyricView setNeedsDisplay];
-}
-
 - (void)configure:(NSDictionary *)state {
   self.lyricState = state;
   self.playing = [state[@"isPlaying"] boolValue];
@@ -303,6 +178,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
   self.basePosition = [positionValue respondsToSelector:@selector(doubleValue)] ? [positionValue doubleValue] : 0;
   self.basePositionTime = CACurrentMediaTime();
   self.lastLineIndex = -1;
+  // 系统画中画需要处于播放类音频会话，否则可能无法拉起。
   NSError *audioError = nil;
   AVAudioSession *audioSession = AVAudioSession.sharedInstance;
   [audioSession setCategory:AVAudioSessionCategoryPlayback
@@ -310,23 +186,24 @@ RCT_EXPORT_MODULE(LXPipLyric)
                       options:AVAudioSessionCategoryOptionDuckOthers | AVAudioSessionCategoryOptionAllowBluetoothA2DP
                         error:&audioError];
   if (audioError == nil) [audioSession setActive:YES error:&audioError];
-  [self setupPipContentIfNeeded];
-  [self updatePipContent];
+  [self attachDisplayViewIfNeeded];
+  [self renderCurrentFrame];
 
   if (self.configured) {
     [self ensureTickTimer];
     return;
   }
   if (@available(iOS 15.0, *)) {
-    if ([AVPictureInPictureController isPictureInPictureSupported] == NO || self.sourceView == nil || self.pipViewController == nil) {
+    if ([AVPictureInPictureController isPictureInPictureSupported] == NO || self.displayLayer == nil) {
       [self sendEventWithName:@"LXPipLyricFailed" body:@{@"message": @"当前设备不支持系统画中画"}];
       return;
     }
     AVPictureInPictureControllerContentSource *source =
-      [[AVPictureInPictureControllerContentSource alloc] initWithActiveVideoCallSourceView:self.sourceView contentViewController:self.pipViewController];
+      [[AVPictureInPictureControllerContentSource alloc] initWithSampleBufferDisplayLayer:self.displayLayer playbackDelegate:self];
     AVPictureInPictureController *controller = [[AVPictureInPictureController alloc] initWithContentSource:source];
     controller.delegate = self;
     controller.canStartPictureInPictureAutomaticallyFromInline = YES;
+    controller.requiresLinearPlayback = YES;
     self.pipController = controller;
     self.configured = YES;
     [self ensureTickTimer];
@@ -349,8 +226,150 @@ RCT_EXPORT_MODULE(LXPipLyric)
   NSInteger index = [self currentLineIndexForPosition:[self currentPosition]];
   if (index != self.lastLineIndex) {
     self.lastLineIndex = index;
-    [self updatePipContent];
+    [self renderCurrentFrame];
   }
+}
+
+- (NSDictionary *)currentAndNextText {
+  NSArray<NSDictionary *> *lines = [self lines];
+  NSInteger index = [self currentLineIndexForPosition:[self currentPosition]];
+  if (lines.count == 0 || index < 0) {
+    return @{@"current": self.lyricState[@"currentText"] ?: @"", @"next": self.lyricState[@"nextText"] ?: @""};
+  }
+  NSDictionary *line = lines[index];
+  NSString *current = line[@"text"] ?: @"";
+  NSString *next = @"";
+  if (index + 1 < lines.count) next = lines[index + 1][@"text"] ?: @"";
+  if (current.length == 0 && index + 1 < lines.count) {
+    current = next;
+    next = index + 2 < lines.count ? (lines[index + 2][@"text"] ?: @"") : @"";
+  }
+  return @{@"current": current, @"next": next};
+}
+
+- (void)renderCurrentFrame {
+  if (self.displayLayer == nil || self.lyricState == nil) return;
+  BOOL singleLine = [self.lyricState[@"singleLine"] boolValue];
+  NSNumber *widthValue = self.lyricState[@"width"];
+  CGFloat widthPercent = widthValue != nil ? MAX(10.0, MIN(100.0, widthValue.doubleValue)) : 100.0;
+  // 画中画歌词条只占旧版的一半宽度，避免横跨大半个屏幕。
+  CGFloat width = (248.0 + (widthPercent / 100.0) * 148.0) * 0.5;
+  CGFloat height = singleLine ? 36.0 : 68.0;
+  CGSize pointSize = CGSizeMake(width, height);
+  if (self.displayView.superview != nil) {
+    CGFloat superHeight = self.displayView.superview.bounds.size.height;
+    self.displayView.frame = CGRectMake(0, MAX(0, superHeight - height), pointSize.width, pointSize.height);
+  }
+
+  UIColor *playedColor = LXColorFromSetting(self.lyricState[@"playedColor"], UIColor.whiteColor);
+  UIColor *unplayedColor = LXColorFromSetting(self.lyricState[@"unplayedColor"], [UIColor colorWithWhite:0.78 alpha:1.0]);
+  NSDictionary *texts = [self currentAndNextText];
+  NSString *currentText = texts[@"current"];
+  NSString *nextText = texts[@"next"];
+  NSNumber *fontValue = self.lyricState[@"fontSize"];
+  CGFloat fontBase = fontValue != nil ? MAX(12.0, MIN(24.0, fontValue.doubleValue / 12.0)) : 15.0;
+  if (singleLine) fontBase = MAX(13.0, MIN(22.0, fontBase));
+
+  UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat defaultFormat];
+  format.scale = 3.0;
+  format.opaque = NO;
+  UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:pointSize format:format];
+  UIImage *image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+    CGContextRef ctx = context.CGContext;
+    [[UIColor clearColor] setFill];
+    CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
+
+    CGRect barRect = CGRectInset(CGRectMake(0, 0, pointSize.width, pointSize.height), 1, 1);
+    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:barRect cornerRadius:singleLine ? (height / 2.0 - 1.0) : 18.0];
+    [[UIColor colorWithWhite:0.30 alpha:0.72] setFill];
+    [path fill];
+    [[UIColor colorWithWhite:1.0 alpha:0.17] setStroke];
+    path.lineWidth = 0.7;
+    [path stroke];
+
+    NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
+    paragraph.lineBreakMode = NSLineBreakByTruncatingTail;
+    paragraph.alignment = NSTextAlignmentLeft;
+    NSDictionary *currentAttributes = @{
+      NSFontAttributeName: [UIFont systemFontOfSize:fontBase weight:UIFontWeightSemibold],
+      NSForegroundColorAttributeName: playedColor,
+      NSParagraphStyleAttributeName: paragraph,
+    };
+    NSDictionary *nextAttributes = @{
+      NSFontAttributeName: [UIFont systemFontOfSize:MAX(12.0, fontBase - 3.0) weight:UIFontWeightRegular],
+      NSForegroundColorAttributeName: unplayedColor,
+      NSParagraphStyleAttributeName: paragraph,
+    };
+
+    CGFloat textWidth = pointSize.width - 70.0;
+    if (singleLine) {
+      CGSize textSize = [currentText sizeWithAttributes:currentAttributes];
+      CGFloat y = MAX(5.0, (height - textSize.height) / 2.0 - 1.0);
+      [currentText drawInRect:CGRectMake(22.0, y, textWidth, height - 10.0) withAttributes:currentAttributes];
+    } else {
+      [currentText drawInRect:CGRectMake(22.0, 9.0, textWidth, fontBase + 5.0) withAttributes:currentAttributes];
+      [nextText drawInRect:CGRectMake(22.0, 36.0, textWidth, fontBase + 2.0) withAttributes:nextAttributes];
+    }
+
+    UIImage *note = [UIImage systemImageNamed:@"music.note"];
+    if (note != nil) {
+      note = [note imageWithTintColor:[UIColor colorWithWhite:1.0 alpha:0.9] renderingMode:UIImageRenderingModeAlwaysOriginal];
+      [note drawInRect:CGRectMake(pointSize.width - 36.0, (pointSize.height - 16.0) / 2.0, 16.0, 16.0)];
+    }
+  }];
+
+  CVPixelBufferRef pixelBuffer = NULL;
+  NSDictionary *options = @{(id)kCVPixelBufferIOSurfacePropertiesKey: @{},
+                            (id)kCVPixelBufferCGImageCompatibilityKey: @YES,
+                            (id)kCVPixelBufferCGBitmapContextCompatibilityKey: @YES};
+  CVReturn status = CVPixelBufferCreate(kCFAllocatorDefault,
+                                        (size_t)(pointSize.width * 3.0),
+                                        (size_t)(pointSize.height * 3.0),
+                                        kCVPixelFormatType_32BGRA,
+                                        (__bridge CFDictionaryRef)options,
+                                        &pixelBuffer);
+  if (status != kCVReturnSuccess || pixelBuffer == NULL) return;
+
+  CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+  void *baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer);
+  size_t bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer);
+  CGContextRef bitmapContext = CGBitmapContextCreate(baseAddress,
+                                                     CVPixelBufferGetWidth(pixelBuffer),
+                                                     CVPixelBufferGetHeight(pixelBuffer),
+                                                     8,
+                                                     bytesPerRow,
+                                                     CGColorSpaceCreateDeviceRGB(),
+                                                     kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+  if (bitmapContext != NULL) {
+    CGContextDrawImage(bitmapContext, CGRectMake(0, 0, CVPixelBufferGetWidth(pixelBuffer), CVPixelBufferGetHeight(pixelBuffer)), image.CGImage);
+    CGContextRelease(bitmapContext);
+  }
+  CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+
+  CMVideoFormatDescriptionRef formatDescription = NULL;
+  CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer, &formatDescription);
+  if (formatDescription == NULL) {
+    CVPixelBufferRelease(pixelBuffer);
+    return;
+  }
+  CMTime presentationTime = self.displayLayer.controlTimebase != NULL ? CMTimebaseGetTime(self.displayLayer.controlTimebase) : kCMTimeZero;
+  CMSampleTimingInfo timing = {CMTimeMake(1, 30), presentationTime, kCMTimeInvalid};
+  CMSampleBufferRef sampleBuffer = NULL;
+  CMSampleBufferCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer, true, NULL, NULL, formatDescription, &timing, &sampleBuffer);
+  if (sampleBuffer != NULL) {
+    CFArrayRef attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, true);
+    if (attachments != NULL && CFArrayGetCount(attachments) > 0) {
+      CFMutableDictionaryRef dictionary = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(attachments, 0);
+      CFDictionarySetValue(dictionary, kCMSampleAttachmentKey_DisplayImmediately, kCFBooleanTrue);
+    }
+    if (self.displayLayer.status == AVQueuedSampleBufferRenderingStatusFailed) {
+      [self.displayLayer flush];
+    }
+    [self.displayLayer enqueueSampleBuffer:sampleBuffer];
+    CFRelease(sampleBuffer);
+  }
+  if (formatDescription != NULL) CFRelease(formatDescription);
+  CVPixelBufferRelease(pixelBuffer);
 }
 
 RCT_REMAP_METHOD(configure, configureWithState:(NSDictionary *)state resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
@@ -373,7 +392,7 @@ RCT_REMAP_METHOD(update, updateWithState:(NSDictionary *)state resolver:(RCTProm
   self.basePosition = [positionValue respondsToSelector:@selector(doubleValue)] ? [positionValue doubleValue] : 0;
   self.basePositionTime = CACurrentMediaTime();
   self.lastLineIndex = -1;
-  if (self.configured) [self updatePipContent];
+  if (self.configured) [self renderCurrentFrame];
   resolve(nil);
 }
 
@@ -383,9 +402,12 @@ RCT_REMAP_METHOD(start, startWithResolver:(RCTPromiseResolveBlock)resolve reject
       reject(@"not_configured", @"画中画歌词尚未初始化", nil);
       return;
     }
-    [self updatePipContent];
     if (self.pipController.isPictureInPictureActive) {
       resolve(@YES);
+      return;
+    }
+    if (self.pipController.isPictureInPicturePossible == NO) {
+      resolve(@NO);
       return;
     }
     [self.pipController startPictureInPicture];
@@ -409,10 +431,9 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
     self.pipController.delegate = nil;
   }
   self.pipController = nil;
-  self.pipViewController = nil;
-  self.lyricView = nil;
-  [self.sourceView removeFromSuperview];
-  self.sourceView = nil;
+  [self.displayView removeFromSuperview];
+  self.displayView = nil;
+  self.displayLayer = nil;
   self.configured = NO;
   self.lyricState = nil;
   resolve(nil);
@@ -421,10 +442,13 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
 #pragma mark - AVPictureInPictureControllerDelegate
 
 - (void)pictureInPictureControllerDidStartPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
-  [self updatePipContent];
+  [self renderCurrentFrame];
   [self sendEventWithName:@"LXPipLyricStarted" body:@{}];
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    [self updatePipContent];
+    [self renderCurrentFrame];
+  });
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.9 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [self renderCurrentFrame];
   });
 }
 
@@ -436,17 +460,12 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
   [self sendEventWithName:@"LXPipLyricFailed" body:@{@"message": error.localizedDescription ?: @"画中画启动失败"}];
 }
 
-- (void)pictureInPictureController:(AVPictureInPictureController *)pictureInPictureController restoreUserInterfaceForPictureInPictureStopWithCompletionHandler:(void (^)(BOOL restoredUserInterface))completionHandler {
-  if (completionHandler != NULL) completionHandler(YES);
-}
-
 #pragma mark - AVPictureInPictureSampleBufferPlaybackDelegate
 
 - (void)pictureInPictureController:(AVPictureInPictureController *)pictureInPictureController setPlaying:(BOOL)playing {
+  self.playing = playing;
   self.basePosition = [self currentPosition];
   self.basePositionTime = CACurrentMediaTime();
-  self.playing = playing;
-  [self updatePipContent];
 }
 
 - (void)pictureInPictureController:(AVPictureInPictureController *)pictureInPictureController skipByInterval:(CMTime)skipInterval completionHandler:(void (^)(void))completionHandler {
@@ -458,7 +477,6 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
 }
 
 - (void)pictureInPictureController:(AVPictureInPictureController *)pictureInPictureController didTransitionToRenderSize:(CMVideoDimensions)newRenderSize {
-  [self updatePipContent];
 }
 
 - (BOOL)pictureInPictureControllerIsPlaybackPaused:(AVPictureInPictureController *)pictureInPictureController {

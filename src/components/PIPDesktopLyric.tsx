@@ -101,9 +101,15 @@ export default () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const emitter = new NativeEventEmitter(LXPipLyric)
     const listener = emitter.addListener('LXPipLyricRemoteCommand', (event: { action?: string, position?: number }) => {
-      // 播放/暂停和跳转已经由原生直接控制 TrackPlayer；这里只把跳转后的
-      // 位置同步回界面，避免后台事件延迟导致二次跳转。
-      if (event.action === 'seek' && typeof event.position === 'number') {
+      // 播放/暂停和跳转已经由原生直接控制 TrackPlayer；这里把远程操作
+      // 同步回 JS 状态，避免每秒 update 用旧状态覆盖画中画。
+      if (event.action === 'pause') {
+        global.app_event.playerPause()
+        global.app_event.pause()
+      } else if (event.action === 'play') {
+        global.app_event.playerPlaying()
+        global.app_event.play()
+      } else if (event.action === 'seek' && typeof event.position === 'number') {
         global.app_event.setProgress(event.position)
       }
     })

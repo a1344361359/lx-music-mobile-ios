@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import TrackPlayer, { State as TPState, Event as TPEvent } from '@/plugins/player/trackPlayer'
-import { AppState, Platform } from 'react-native'
+import { Platform } from 'react-native'
 // import { store } from '@/store'
 // import { action as playerAction, STATUS } from '@/store/modules/player'
 import { isTempId, isEmpty } from './utils'
@@ -11,22 +11,6 @@ import { setBackgroundAudioPlaying } from '@/utils/nativeModules/backgroundAudio
 import { pause, play, playNext, playPrev } from '@/core/player/player'
 
 let isInitialized = false
-let lastAutoResumeAt = 0
-let lastUserPauseAt = 0
-let isPlaying = false
-
-// 某些系统/耳机在后台会错误地暂停 RNTP；只要用户没有主动暂停，就在短暂延迟后恢复。
-const tryResumeBackgroundPlayback = async() => {
-  if (Platform.OS !== 'ios' || AppState.currentState === 'active') return
-  if (!isPlaying) return
-  const now = Date.now()
-  if (now - lastAutoResumeAt < 2000) return
-  if (now - lastUserPauseAt < 3000) return
-  lastAutoResumeAt = now
-  setTimeout(() => {
-    if (AppState.currentState !== 'active') void TrackPlayer.play()
-  }, 350)
-}
 
 // let retryTrack: LX.Player.Track | null = null
 // let retryGetUrlId: string | null = null
@@ -48,14 +32,11 @@ const registerPlaybackService = async() => {
   console.log('reg services...')
   TrackPlayer.addEventListener(TPEvent.RemotePlay, () => {
     // console.log('remote-play')
-    lastUserPauseAt = 0
     play()
   })
 
   TrackPlayer.addEventListener(TPEvent.RemotePause, () => {
     // console.log('remote-pause')
-    isPlaying = false
-    lastUserPauseAt = Date.now()
     void pause()
   })
 
@@ -107,22 +88,16 @@ const registerPlaybackService = async() => {
         break
       case TPState.Ready:
       case TPState.Stopped:
-        isPlaying = false
         setBackgroundAudioPlaying(false)
         global.app_event.playerPause()
         global.app_event.pause()
         break
       case TPState.Paused:
-        if (isPlaying && AppState.currentState !== 'active') {
-          void tryResumeBackgroundPlayback()
-          break
-        }
         setBackgroundAudioPlaying(false)
         global.app_event.playerPause()
         global.app_event.pause()
         break
       case TPState.Playing:
-        isPlaying = true
         setBackgroundAudioPlaying(true)
         global.app_event.playerPlaying()
         global.app_event.play()

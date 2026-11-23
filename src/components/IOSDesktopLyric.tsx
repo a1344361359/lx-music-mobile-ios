@@ -1,10 +1,11 @@
-import { Platform, TouchableOpacity, View } from 'react-native'
+import { Animated, PanResponder, Platform, TouchableOpacity, View } from 'react-native'
 import Text from '@/components/common/Text'
 import { useLrcPlay, useLrcSet, type Line } from '@/plugins/lyric'
 import { useSettingValue } from '@/store/setting/hook'
 import { useWindowSize } from '@/utils/hooks'
 import { navigations } from '@/navigation'
 import commonState from '@/store/common/state'
+import { useMemo, useRef } from 'react'
 
 const EMPTY_LINE: Line = { time: 0, text: '播放歌曲后在此显示歌词', extendedLyrics: [] }
 
@@ -25,6 +26,26 @@ export default () => {
   const lyricLines = useLrcSet()
   const { line } = useLrcPlay()
   const windowSize = useWindowSize()
+  const panelWidth = Math.min(windowSize.width - 24, (windowSize.width - 24) * widthPercent / 100)
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 66 })).current
+  const panPosition = useRef({ x: 0, y: 66 })
+  const dragStart = useRef({ x: 0, y: 66 })
+
+  const panResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => {
+      dragStart.current = { ...panPosition.current }
+    },
+    onPanResponderMove: (_, gesture) => {
+      const halfRange = Math.max(0, (windowSize.width - panelWidth) / 2)
+      const x = Math.max(-halfRange, Math.min(halfRange, dragStart.current.x + gesture.dx))
+      const y = Math.max(44, Math.min(windowSize.height - 140, dragStart.current.y + gesture.dy))
+      panPosition.current = { x, y }
+      pan.setValue({ x, y })
+    },
+  }), [panelWidth, pan, windowSize.height, windowSize.width])
 
   if (Platform.OS !== 'ios' || !enabled) return null
 
@@ -37,7 +58,6 @@ export default () => {
     : [EMPTY_LINE]
   const fontSize = Math.max(12, fontSizeSetting / 10)
   const textAlign = alignX === 'center' ? 'center' : alignX === 'right' ? 'right' : 'left'
-  const panelWidth = Math.min(windowSize.width - 24, (windowSize.width - 24) * widthPercent / 100)
 
   const openPlayDetail = () => {
     if (commonState.componentIds.home) {
@@ -49,23 +69,29 @@ export default () => {
     <View pointerEvents="box-none" style={{
       position: 'absolute',
       zIndex: 1000,
-      top: 66,
+      top: 0,
       left: 0,
       right: 0,
       alignItems: 'center',
     }}>
-      <TouchableOpacity
-        activeOpacity={0.82}
-        onPress={openPlayDetail}
+      <Animated.View
+        {...panResponder.panHandlers}
         style={{
           width: panelWidth,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          borderRadius: 12,
-          backgroundColor: 'rgba(12, 12, 14, 0.68)',
-          opacity: Math.max(0.15, opacitySetting / 100),
+          transform: pan.getTranslateTransform(),
         }}
       >
+        <TouchableOpacity
+          activeOpacity={0.82}
+          onPress={openPlayDetail}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 12,
+            backgroundColor: 'rgba(12, 12, 14, 0.68)',
+            opacity: Math.max(0.15, opacitySetting / 100),
+          }}
+        >
         {visibleLines.map((lyricLine, index) => (
           <View key={`${lyricLine.time}-${index}`} style={{ paddingVertical: 2 }}>
             <Text
@@ -91,7 +117,8 @@ export default () => {
             ))}
           </View>
         ))}
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   )
 }

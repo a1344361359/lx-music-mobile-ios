@@ -32,7 +32,7 @@ export default memo(() => {
     <Section title={t('setting_lyric_desktop')}>
       {Platform.OS === 'ios' && (
         <Text size={12} color={theme['c-font-label']} style={{ paddingHorizontal: 15, paddingBottom: 8, lineHeight: 18 }}>
-          iOS 版桌面歌词与画中画歌词分开控制。画中画歌词会浮在其他 App 和桌面上，系统画中画按钮支持播放/暂停及前后 10 秒；若未弹出，请确认系统设置中已允许“自动开启画中画”。
+          iOS 版桌面歌词与画中画歌词分开控制。桌面歌词条可按住拖动到任意位置；画中画歌词会浮在其他 App 和桌面上，系统画中画按钮支持播放/暂停及前后 10 秒；若未弹出，请确认系统设置中已允许“自动开启画中画”。
         </Text>
       )}
       {Platform.OS === 'ios' && <IsShowPip />}

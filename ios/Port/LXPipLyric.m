@@ -69,6 +69,9 @@ API_AVAILABLE(ios(15.0))
 @property (nonatomic, assign) CFTimeInterval lastPositionSyncTime;
 @property (nonatomic, assign) BOOL positionRequestInFlight;
 @property (nonatomic, assign) BOOL hasStartedEvent;
+@property (nonatomic, assign) CFTimeInterval remotePlaybackChangedAt;
+@property (nonatomic, assign) BOOL remotePlaybackState;
+- (NSNumber *)currentTrackPlayerState;
 @end
 
 @implementation LXPipLyricModule
@@ -90,6 +93,8 @@ RCT_EXPORT_MODULE(LXPipLyric)
     _positionRequestInFlight = NO;
     _basePosition = 0;
     _basePositionTime = CACurrentMediaTime();
+    _remotePlaybackChangedAt = 0;
+    _remotePlaybackState = NO;
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(handleAppBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
   }
   return self;
@@ -474,6 +479,26 @@ RCT_REMAP_METHOD(update, updateWithState:(NSDictionary *)state resolver:(RCTProm
   BOOL wasPlaying = self.playing;
   self.lyricState = state;
   BOOL nextPlaying = [state[@"isPlaying"] boolValue];
+  // 用户在系统画中画里按下暂停后，JS 可能还来不及把 isPlay 改成 false；
+  // 这段短暂窗口内必须以原生远程操作为准，否则每秒 update 会把播放状态
+  // 又写回 true，表现就是“能暂停但马上自己恢复”。
+  if (self.remotePlaybackChangedAt > 0) {
+    if (nextPlaying == self.remotePlaybackState) {
+      self.remotePlaybackChangedAt = 0;
+    } else if (CACurrentMediaTime() - self.remotePlaybackChangedAt < 2.5) {
+      nextPlaying = self.remotePlaybackState;
+    } else {
+      self.remotePlaybackChangedAt = 0;
+    }
+  }
+  // 以 TrackPlayer 的真实状态为最终准绳。这样无论 JS 的旧 isPlay 多晚
+  // 才更新，暂停后画中画都不会把自己画回“正在播放”。
+  NSNumber *nativeState = [self currentTrackPlayerState];
+  if (nativeState != nil) {
+    NSInteger code = nativeState.integerValue;
+    if (code == 2) nextPlaying = YES;
+    else if (code == 1 || code == 3 || code == 4) nextPlaying = NO;
+  }
   id positionValue = state[@"position"];
   double nextPosition = [positionValue respondsToSelector:@selector(doubleValue)] ? [positionValue doubleValue] : 0;
   // JS 在后台可能延迟上报，不能每秒都把原生时钟拉回旧位置。
@@ -551,6 +576,28 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
   }
 }
 
+- (NSNumber *)currentTrackPlayerState {
+  id module = [self.bridge moduleForName:@"TrackPlayerModule"];
+  SEL selector = NSSelectorFromString(@"getState:rejecter:");
+  if (module == nil || ![module respondsToSelector:selector]) return nil;
+  NSMethodSignature *signature = [module methodSignatureForSelector:selector];
+  if (signature == nil) return nil;
+  NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+  invocation.target = module;
+  invocation.selector = selector;
+  __block NSNumber *state = nil;
+  RCTPromiseResolveBlock resolve = ^(id result) {
+    if ([result isKindOfClass:[NSNumber class]]) state = result;
+  };
+  RCTPromiseRejectBlock reject = ^(NSString *code, NSString *message, NSError *error) {};
+  [invocation setArgument:&resolve atIndex:2];
+  [invocation setArgument:&reject atIndex:3];
+  @try { [invocation invoke]; } @catch (NSException *exception) {
+    NSLog(@"[LXPipLyric] getState failed: %@", exception);
+  }
+  return state;
+}
+
 - (void)invokeTrackPlayerSeekTo:(double)time {
   id module = [self.bridge moduleForName:@"TrackPlayerModule"];
   SEL selector = NSSelectorFromString(@"seekTo:resolver:rejecter:");
@@ -599,7 +646,16 @@ RCT_REMAP_METHOD(teardown, teardownWithResolver:(RCTPromiseResolveBlock)resolve 
   self.basePosition = [self currentPosition];
   self.basePositionTime = CACurrentMediaTime();
   self.playing = playing;
+  self.remotePlaybackChangedAt = CACurrentMediaTime();
+  self.remotePlaybackState = playing;
   [self invokeTrackPlayerNoArgument:playing ? @"play:rejecter:" : @"pause:rejecter:"];
+  // 同时通知 JS 立即更新播放状态；App 在前台时不必等 TrackPlayer 的下一个事件。
+  [self sendEventWithName:@"LXPipLyricRemoteCommand" body:@{@"action": playing ? @"play" : @"pause"}];
+  if (@available(iOS 13.0, *)) {
+    MPNowPlayingInfoCenter.defaultCenter.playbackState = playing
+      ? MPNowPlayingPlaybackStatePlaying
+      : MPNowPlayingPlaybackStatePaused;
+  }
   [self renderCurrentFrame];
 }
 

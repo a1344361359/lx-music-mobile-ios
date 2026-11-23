@@ -12,12 +12,22 @@ RCT_EXPORT_MODULE(LXNowPlaying)
 + (BOOL)requiresMainQueueSetup { return YES; }
 - (dispatch_queue_t)methodQueue { return dispatch_get_main_queue(); }
 
+// JS 每秒只上报进度时不会再带歌曲名。这里保留一份原生缓存，
+// 即使系统或播放器短暂清空 nowPlayingInfo，下一次进度刷新也能把
+// 标题、歌手、封面和总时长重新拼回锁屏卡片。
+static NSMutableDictionary *LXNowPlayingCache = nil;
+
 static NSMutableDictionary *LXNowPlayingInfo(void) {
-  NSDictionary *current = MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo;
-  return current != nil ? [current mutableCopy] : [NSMutableDictionary dictionary];
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    LXNowPlayingCache = [NSMutableDictionary dictionary];
+    NSDictionary *current = MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo;
+    if (current != nil) [LXNowPlayingCache addEntriesFromDictionary:current];
+  });
+  return LXNowPlayingCache;
 }
 
-- (void)applyArtwork:(NSString *)urlString {
+- (void)applyArtwork:(NSString *)urlString forTitle:(NSString *)expectedTitle {
   if (urlString.length == 0) return;
   NSURL *url = [NSURL URLWithString:urlString];
   if (url == nil || url.scheme.length == 0) return;
@@ -31,8 +41,12 @@ static NSMutableDictionary *LXNowPlayingInfo(void) {
     }];
     dispatch_async(dispatch_get_main_queue(), ^{
       NSMutableDictionary *now = LXNowPlayingInfo();
+      NSString *currentTitle = now[MPMediaItemPropertyTitle];
+      // 网络封面可能在新歌已经切走之后才返回，不能把旧封面贴到新歌上。
+      if (expectedTitle.length > 0 && currentTitle.length > 0 &&
+          ![expectedTitle isEqualToString:currentTitle]) return;
       now[MPMediaItemPropertyArtwork] = artwork;
-      MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo = now;
+      MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo = [now copy];
     });
   });
 }
@@ -40,7 +54,14 @@ static NSMutableDictionary *LXNowPlayingInfo(void) {
 RCT_EXPORT_METHOD(update:(NSDictionary *)info resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
   NSMutableDictionary *now = LXNowPlayingInfo();
   id value = info[@"title"];
-  if ([value isKindOfClass:[NSString class]] && [value length] > 0) now[MPMediaItemPropertyTitle] = value;
+  if ([value isKindOfClass:[NSString class]] && [value length] > 0) {
+    NSString *oldTitle = now[MPMediaItemPropertyTitle];
+    if (oldTitle.length > 0 && ![oldTitle isEqualToString:value]) {
+      [now removeObjectForKey:MPMediaItemPropertyArtwork];
+      [now removeObjectForKey:MPMediaItemPropertyAlbumTitle];
+    }
+    now[MPMediaItemPropertyTitle] = value;
+  }
   value = info[@"artist"];
   if ([value isKindOfClass:[NSString class]] && [value length] > 0) now[MPMediaItemPropertyArtist] = value;
   value = info[@"album"];
@@ -62,7 +83,16 @@ RCT_EXPORT_METHOD(update:(NSDictionary *)info resolver:(RCTPromiseResolveBlock)r
     now[MPNowPlayingInfoPropertyPlaybackRate] = [info[@"isPlaying"] boolValue] ? @1.0 : @0.0;
   }
 
-  MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo = now;
+  // 明确告诉系统这是一首普通音频，并补齐默认播放速率/直播标记；
+  // iOS 26 的锁屏播放器在没有这些字段时可能只显示空白卡片。
+  now[MPNowPlayingInfoPropertyMediaType] = @(MPNowPlayingInfoMediaTypeAudio);
+  now[MPNowPlayingInfoPropertyDefaultPlaybackRate] = @1.0;
+  now[MPNowPlayingInfoPropertyIsLiveStream] = @NO;
+  if (now[MPNowPlayingInfoPropertyPlaybackRate] == nil) {
+    NSNumber *playing = info[@"isPlaying"];
+    now[MPNowPlayingInfoPropertyPlaybackRate] = playing.boolValue ? @1.0 : @0.0;
+  }
+  MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo = [now copy];
 
   if (@available(iOS 13.0, *)) {
     NSNumber *playing = info[@"isPlaying"];
@@ -74,7 +104,9 @@ RCT_EXPORT_METHOD(update:(NSDictionary *)info resolver:(RCTPromiseResolveBlock)r
   }
 
   value = info[@"artwork"];
-  if ([value isKindOfClass:[NSString class]]) [self applyArtwork:value];
+  if ([value isKindOfClass:[NSString class]]) {
+    [self applyArtwork:value forTitle:now[MPMediaItemPropertyTitle]];
+  }
 
   resolve(nil);
 }

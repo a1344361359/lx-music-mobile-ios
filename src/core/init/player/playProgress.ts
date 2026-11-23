@@ -28,7 +28,14 @@ export default () => {
   let isScreenOn = true
 
   const syncSystemProgress = (time: number, maxTime = playerState.progress.maxPlayTime, playing = playerState.isPlay) => {
+    const musicInfo = playerState.musicInfo
+    // 不只传进度：锁屏在后台被系统刷新时可能已经丢掉标题/歌手，
+    // 每秒把当前歌曲的完整信息一起写回，卡片不会变成空白。
     void updateNowPlaying({
+      title: musicInfo.name,
+      artist: musicInfo.singer,
+      album: musicInfo.album,
+      artwork: musicInfo.pic,
       duration: maxTime,
       elapsedTime: time,
       playbackRate: playing ? 1 : 0,

@@ -1,0 +1,20 @@
+name: macos runner probe
+on:
+  workflow_dispatch:
+jobs:
+  macos15:
+    runs-on: macos-15
+    timeout-minutes: 5
+    steps:
+      - run: |
+          echo "macos-15 ok"
+          xcodebuild -version
+          sw_vers
+  macos15intel:
+    runs-on: macos-15-intel
+    timeout-minutes: 5
+    steps:
+      - run: |
+          echo "macos-15-intel ok"
+          xcodebuild -version
+          sw_vers

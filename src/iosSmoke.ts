@@ -9,6 +9,8 @@ import { loadScript, onScriptAction, sendAction, destroy } from '@/utils/nativeM
 import { gzipFile, unGzipFile, readFile, writeFile } from '@/utils/fs'
 import { getBootLog } from '@/utils/bootLog'
 import { setNavActiveId, updateSetting } from '@/core/common'
+import { applyTheme } from '@/core/theme'
+import { getTheme } from '@/theme/themes'
 import settingState from '@/store/setting/state'
 import { drawerStates } from '@/utils/iosDrawerSmoke'
 import { smokeFatalErrors } from '@/utils/errorHandle'
@@ -212,6 +214,14 @@ export const runSmokeTests = async() => {
       checks: [`pip snapshot; supported=${supported}; start=${started}`],
       screen: 'pip',
     }))
+    return
+  }
+  if (uiScreen === 'glass') {
+    updateSetting({ 'theme.id': 'liquid_glass' })
+    await getTheme().then(applyTheme)
+    setNavActiveId('nav_setting')
+    await pause(1800)
+    await RNFS.writeFile(reportPath, JSON.stringify({ status: 'passed', checks: ['liquid glass theme snapshot'], screen: 'glass' }))
     return
   }
   if (uiScreen) {

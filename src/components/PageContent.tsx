@@ -1,5 +1,5 @@
 // import { useEffect, useState } from 'react'
-import { View, SafeAreaView, Platform } from 'react-native'
+import { View, SafeAreaView, Platform, StyleSheet } from 'react-native'
 import { useTheme } from '@/store/theme/hook'
 import ImageBackground from '@/components/common/ImageBackground'
 import { useWindowSize } from '@/utils/hooks'
@@ -8,6 +8,8 @@ import { scaleSizeAbsHR } from '@/utils/pixelRatio'
 import { defaultHeaders } from './common/Image'
 import SizeView from './SizeView'
 import { useBgPic } from '@/store/common/hook'
+import { useSettingValue } from '@/store/setting/hook'
+import { hexToRgba } from '@/theme/themes/kmusic'
 
 interface Props {
   children: React.ReactNode
@@ -20,6 +22,12 @@ export default ({ children }: Props) => {
   const theme = useTheme()
   const windowSize = useWindowSize()
   const pic = useBgPic()
+  const glassColor = useSettingValue('theme.glassColor')
+  const glassTransparency = useSettingValue('theme.glassTransparency')
+  const isGlass = theme.id === 'liquid_glass'
+  const glassTint = isGlass
+    ? hexToRgba(glassColor, 0.05 + (1 - Math.max(0, Math.min(100, glassTransparency)) / 100) * 0.16)
+    : undefined
   // const [wh, setWH] = useState<{ width: number | string, height: number | string }>({ width: '100%', height: Dimensions.get('screen').height })
 
   // 固定宽高度 防止弹窗键盘时大小改变导致背景被缩放
@@ -46,13 +54,15 @@ export default ({ children }: Props) => {
         style={{ position: 'absolute', left: 0, top: 0, height: windowSize.height, width: windowSize.width, backgroundColor: theme['c-content-background'] }}
         source={theme['bg-image']}
         resizeMode="cover"
+        blurRadius={isGlass ? 10 : 0}
       >
+        {isGlass ? <View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: glassTint }]} /> : null}
       </ImageBackground>
       <View style={{ flex: 1, flexDirection: 'column', backgroundColor: theme['c-main-background'] }}>
         {children}
       </View>
     </View>
-  ), [children, theme, windowSize.height, windowSize.width])
+  ), [children, theme, glassTint, isGlass, windowSize.height, windowSize.width])
   const picComponent = useMemo(() => {
     return (
       <View style={{ flex: 1, overflow: 'hidden' }}>

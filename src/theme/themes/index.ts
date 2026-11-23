@@ -2,13 +2,14 @@
 import { getUserTheme, saveUserTheme } from '@/utils/data'
 import themes from '@/theme/themes/themes'
 import kmusicTheme, { hexToRgba, kmusicLightTheme, makeKMusicTheme } from '@/theme/themes/kmusic'
+import liquidGlassTheme, { makeLiquidGlassTheme } from '@/theme/themes/liquidGlass'
 import settingState from '@/store/setting/state'
 import themeState from '@/store/theme/state'
 import { isUrl } from '@/utils'
 import { privateStorageDirectoryPath } from '@/utils/fs'
 import { type ImageSourcePropType } from 'react-native'
 
-const allThemes = [...themes, kmusicTheme, kmusicLightTheme] as LX.Theme[]
+const allThemes = [...themes, kmusicTheme, kmusicLightTheme, liquidGlassTheme] as LX.Theme[]
 
 export const BG_IMAGES = {
   'china_ink.jpg': require('./images/china_ink.jpg') as ImageSourcePropType,
@@ -16,6 +17,7 @@ export const BG_IMAGES = {
   'landingMoon.png': require('./images/landingMoon2.png') as ImageSourcePropType,
   'myzcbg.jpg': require('./images/myzcbg.jpg') as ImageSourcePropType,
   'xnkl.png': require('./images/xnkl.png') as ImageSourcePropType,
+  'liquid_glass.jpg': require('./images/liquid_glass.jpg') as ImageSourcePropType,
 } as const
 
 
@@ -60,7 +62,7 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
   } else {
     const extInfo = (theme as LocalTheme).config.extInfo
     if (extInfo['bg-image']) {
-      if (!theme.isDark || !settingState.setting['theme.hideBgDark']) bgImg = BG_IMAGES[extInfo['bg-image']]
+      if (theme.id === 'liquid_glass' || !theme.isDark || !settingState.setting['theme.hideBgDark']) bgImg = BG_IMAGES[extInfo['bg-image']]
     }
   }
 
@@ -97,6 +99,23 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
     'c-border-background': theme.config.themeColors['c-primary-light-100-alpha-700'],
     'bg-image': bgImg,
   } as const
+  if (theme.id === 'liquid_glass') {
+    const transparency = Math.max(0, Math.min(100, Number(settingState.setting['theme.glassTransparency']) || 0)) / 100
+    const contentAlpha = 0.92 - 0.72 * transparency
+    const panelAlpha = 0.84 - 0.68 * transparency
+    const appAlpha = 0.92 - 0.78 * transparency
+    return {
+      ...active,
+      'c-app-background': `rgba(5, 7, 14, ${appAlpha})`,
+      'c-main-background': `rgba(8, 10, 19, ${panelAlpha})`,
+      'c-content-background': `rgba(8, 10, 18, ${contentAlpha})`,
+      'c-border-background': 'rgba(255, 255, 255, 0.16)',
+      'c-font': 'rgb(245, 246, 250)',
+      'c-font-label': 'rgba(255, 255, 255, 0.62)',
+      'c-primary-background': hexToRgba(settingState.setting['theme.glassColor'], 0.2),
+      'c-primary-background-active': hexToRgba(settingState.setting['theme.glassColor'], 0.3),
+    } as const
+  }
   if (theme.id === 'kmusic' || theme.id === 'kmusic_light') {
     const isDark = theme.isDark
     const accent = settingState.setting['theme.kmusicAccentColor']
@@ -154,6 +173,8 @@ export const getTheme = async() => {
 
   if (theme && (theme.id === 'kmusic' || theme.id === 'kmusic_light')) {
     theme = makeKMusicTheme(theme.id, settingState.setting['theme.kmusicAccentColor'])
+  } else if (theme && theme.id === 'liquid_glass') {
+    theme = makeLiquidGlassTheme(settingState.setting['theme.glassColor'], settingState.setting['theme.glassTransparency'])
   }
-  return theme as LX.Theme
+  return theme!
 }

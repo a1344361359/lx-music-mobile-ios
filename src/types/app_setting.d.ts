@@ -85,6 +85,8 @@ declare global {
        * KMusic 界面强调色
        */
       'theme.kmusicAccentColor': string
+      'theme.glassColor': string
+      'theme.glassTransparency': number
 
       /**
        * 亮色主题id

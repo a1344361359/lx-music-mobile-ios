@@ -65,6 +65,9 @@ API_AVAILABLE(ios(15.0))
 @property (nonatomic, assign) double basePosition;
 @property (nonatomic, assign) CFTimeInterval basePositionTime;
 @property (nonatomic, assign) NSInteger lastLineIndex;
+@property (nonatomic, assign) CFTimeInterval lastRenderTime;
+@property (nonatomic, assign) CFTimeInterval lastPositionSyncTime;
+@property (nonatomic, assign) BOOL positionRequestInFlight;
 @property (nonatomic, assign) BOOL hasStartedEvent;
 @end
 
@@ -82,6 +85,9 @@ RCT_EXPORT_MODULE(LXPipLyric)
 - (instancetype)init {
   if (self = [super init]) {
     _lastLineIndex = -1;
+    _lastRenderTime = 0;
+    _lastPositionSyncTime = 0;
+    _positionRequestInFlight = NO;
     _basePosition = 0;
     _basePositionTime = CACurrentMediaTime();
     [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(handleAppBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
@@ -145,14 +151,61 @@ RCT_EXPORT_MODULE(LXPipLyric)
   [window.rootViewController.view insertSubview:view atIndex:0];
 }
 
+// 直接向原生 TrackPlayer 查询真实播放位置；JS 在后台会被挂起，不能再依赖每秒上报。
+- (void)refreshPlayerPosition {
+  if (self.positionRequestInFlight || self.playing == NO) return;
+  id module = [self.bridge moduleForName:@"TrackPlayerModule"];
+  SEL selector = NSSelectorFromString(@"getPosition:rejecter:");
+  if (module == nil || ![module respondsToSelector:selector]) return;
+  NSMethodSignature *signature = [module methodSignatureForSelector:selector];
+  if (signature == nil) return;
+  self.positionRequestInFlight = YES;
+  __weak typeof(self) weakSelf = self;
+  RCTPromiseResolveBlock resolve = ^(id result) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      typeof(self) self = weakSelf;
+      if (self == nil) return;
+      self.positionRequestInFlight = NO;
+      if (![result respondsToSelector:@selector(doubleValue)]) return;
+      double actual = [result doubleValue];
+      double elapsed = self.playing ? CACurrentMediaTime() - self.basePositionTime : 0;
+      double currentRaw = self.basePosition + MAX(0, elapsed);
+      // 只有和当前歌词时钟差得明显时才校正，避免把延迟回调当成拖动。
+      if (fabs(actual - currentRaw) > 0.25) {
+        self.basePosition = MAX(0, actual);
+        self.basePositionTime = CACurrentMediaTime();
+        self.lastLineIndex = -1;
+        [self renderCurrentFrame];
+      }
+    });
+  };
+  RCTPromiseRejectBlock reject = ^(NSString *code, NSString *message, NSError *error) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      typeof(self) self = weakSelf;
+      if (self != nil) self.positionRequestInFlight = NO;
+    });
+  };
+  NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+  invocation.target = module;
+  invocation.selector = selector;
+  [invocation setArgument:&resolve atIndex:2];
+  [invocation setArgument:&reject atIndex:3];
+  @try {
+    [invocation invoke];
+  } @catch (NSException *exception) {
+    self.positionRequestInFlight = NO;
+  }
+}
+
 - (NSArray<NSDictionary *> *)lines {
   id value = self.lyricState[@"lines"];
   return [value isKindOfClass:[NSArray class]] ? value : @[];
 }
 
 - (double)currentPosition {
-  if (self.playing == NO) return self.basePosition;
-  double position = self.basePosition + (CACurrentMediaTime() - self.basePositionTime);
+  double position = self.playing
+    ? self.basePosition + MAX(0, CACurrentMediaTime() - self.basePositionTime)
+    : self.basePosition;
   id offsetValue = self.lyricState[@"offset"];
   if ([offsetValue respondsToSelector:@selector(doubleValue)]) position += [offsetValue doubleValue];
   return MAX(0, position);
@@ -224,7 +277,14 @@ RCT_EXPORT_MODULE(LXPipLyric)
 - (void)tick {
   if (self.lyricState == nil || self.playing == NO) return;
   NSInteger index = [self currentLineIndexForPosition:[self currentPosition]];
-  if (index != self.lastLineIndex) {
+  CFTimeInterval now = CACurrentMediaTime();
+  BOOL pipActive = self.pipController.isPictureInPictureActive;
+  if (now - self.lastPositionSyncTime >= 2.0) {
+    self.lastPositionSyncTime = now;
+    [self refreshPlayerPosition];
+  }
+  // 画中画常驻时持续喂帧，避免最后一帧播放完导致窗口停住或歌词冻结。
+  if (index != self.lastLineIndex || (pipActive && now - self.lastRenderTime >= 1.0)) {
     self.lastLineIndex = index;
     [self renderCurrentFrame];
   }
@@ -252,9 +312,9 @@ RCT_EXPORT_MODULE(LXPipLyric)
   BOOL singleLine = [self.lyricState[@"singleLine"] boolValue];
   NSNumber *widthValue = self.lyricState[@"width"];
   CGFloat widthPercent = widthValue != nil ? MAX(10.0, MIN(100.0, widthValue.doubleValue)) : 100.0;
-  // 画中画歌词条只占旧版的一半宽度，避免横跨大半个屏幕。
-  CGFloat width = (248.0 + (widthPercent / 100.0) * 148.0) * 0.5;
-  CGFloat height = singleLine ? 36.0 : 68.0;
+  // 按参考图做成横向液态玻璃条：默认 100% 宽约 396pt。
+  CGFloat width = 248.0 + (widthPercent / 100.0) * 148.0;
+  CGFloat height = singleLine ? 58.0 : 92.0;
   CGSize pointSize = CGSizeMake(width, height);
   if (self.displayView.superview != nil) {
     CGFloat superHeight = self.displayView.superview.bounds.size.height;
@@ -268,7 +328,12 @@ RCT_EXPORT_MODULE(LXPipLyric)
   NSString *nextText = texts[@"next"];
   NSNumber *fontValue = self.lyricState[@"fontSize"];
   CGFloat fontBase = fontValue != nil ? MAX(12.0, MIN(24.0, fontValue.doubleValue / 12.0)) : 15.0;
-  if (singleLine) fontBase = MAX(13.0, MIN(22.0, fontBase));
+  if (singleLine) fontBase = MAX(14.0, MIN(23.0, fontBase + 1.0));
+
+  NSNumber *transparencyValue = self.lyricState[@"glassTransparency"];
+  CGFloat glassTransparency = transparencyValue != nil ? MAX(0, MIN(100, transparencyValue.doubleValue)) / 100.0 : 0.38;
+  UIColor *glassColor = LXColorFromSetting(self.lyricState[@"glassColor"], [UIColor colorWithRed:184.0 / 255.0 green:174.0 / 255.0 blue:201.0 / 255.0 alpha:1.0]);
+  CGFloat glassAlpha = 0.20 + (1.0 - glassTransparency) * 0.40;
 
   UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat defaultFormat];
   format.scale = 3.0;
@@ -280,10 +345,14 @@ RCT_EXPORT_MODULE(LXPipLyric)
     CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
 
     CGRect barRect = CGRectInset(CGRectMake(0, 0, pointSize.width, pointSize.height), 1, 1);
-    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:barRect cornerRadius:singleLine ? (height / 2.0 - 1.0) : 18.0];
-    [[UIColor colorWithWhite:0.30 alpha:0.72] setFill];
+    UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:barRect cornerRadius:singleLine ? (height / 2.0 - 1.0) : 24.0];
+    [[glassColor colorWithAlphaComponent:glassAlpha] setFill];
     [path fill];
-    [[UIColor colorWithWhite:1.0 alpha:0.17] setStroke];
+    // 玻璃上沿的一层白色高光，让半透明条更像液态玻璃。
+    UIBezierPath *highlight = [UIBezierPath bezierPathWithRoundedRect:CGRectInset(barRect, 1, 1) cornerRadius:singleLine ? (height / 2.0 - 2.0) : 23.0];
+    [[UIColor colorWithWhite:1.0 alpha:0.10] setFill];
+    [highlight fill];
+    [[UIColor colorWithWhite:1.0 alpha:0.22] setStroke];
     path.lineWidth = 0.7;
     [path stroke];
 
@@ -301,20 +370,21 @@ RCT_EXPORT_MODULE(LXPipLyric)
       NSParagraphStyleAttributeName: paragraph,
     };
 
-    CGFloat textWidth = pointSize.width - 70.0;
+    // 左右留出系统关闭/画中画按钮的位置，避免文字被按钮盖住。
+    CGFloat textWidth = pointSize.width - 118.0;
     if (singleLine) {
       CGSize textSize = [currentText sizeWithAttributes:currentAttributes];
       CGFloat y = MAX(5.0, (height - textSize.height) / 2.0 - 1.0);
-      [currentText drawInRect:CGRectMake(22.0, y, textWidth, height - 10.0) withAttributes:currentAttributes];
+      [currentText drawInRect:CGRectMake(54.0, y, textWidth, height - 10.0) withAttributes:currentAttributes];
     } else {
-      [currentText drawInRect:CGRectMake(22.0, 9.0, textWidth, fontBase + 5.0) withAttributes:currentAttributes];
-      [nextText drawInRect:CGRectMake(22.0, 36.0, textWidth, fontBase + 2.0) withAttributes:nextAttributes];
+      [currentText drawInRect:CGRectMake(54.0, 14.0, textWidth, fontBase + 5.0) withAttributes:currentAttributes];
+      [nextText drawInRect:CGRectMake(54.0, height / 2.0 + 3.0, textWidth, fontBase + 2.0) withAttributes:nextAttributes];
     }
 
     UIImage *note = [UIImage systemImageNamed:@"music.note"];
     if (note != nil) {
       note = [note imageWithTintColor:[UIColor colorWithWhite:1.0 alpha:0.9] renderingMode:UIImageRenderingModeAlwaysOriginal];
-      [note drawInRect:CGRectMake(pointSize.width - 36.0, (pointSize.height - 16.0) / 2.0, 16.0, 16.0)];
+      [note drawInRect:CGRectMake(pointSize.width - 73.0, (pointSize.height - 18.0) / 2.0, 18.0, 18.0)];
     }
   }];
 
@@ -353,7 +423,8 @@ RCT_EXPORT_MODULE(LXPipLyric)
     return;
   }
   CMTime presentationTime = self.displayLayer.controlTimebase != NULL ? CMTimebaseGetTime(self.displayLayer.controlTimebase) : kCMTimeZero;
-  CMSampleTimingInfo timing = {CMTimeMake(1, 30), presentationTime, kCMTimeInvalid};
+  // 每帧给 2 秒时长；画中画常驻期间每秒补一帧，防止最后一帧播完停住。
+  CMSampleTimingInfo timing = {CMTimeMake(2, 1), presentationTime, kCMTimeInvalid};
   CMSampleBufferRef sampleBuffer = NULL;
   CMSampleBufferCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer, true, NULL, NULL, formatDescription, &timing, &sampleBuffer);
   if (sampleBuffer != NULL) {
@@ -370,6 +441,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
   }
   if (formatDescription != NULL) CFRelease(formatDescription);
   CVPixelBufferRelease(pixelBuffer);
+  self.lastRenderTime = CACurrentMediaTime();
 }
 
 RCT_REMAP_METHOD(configure, configureWithState:(NSDictionary *)state resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
@@ -386,11 +458,19 @@ RCT_REMAP_METHOD(update, updateWithState:(NSDictionary *)state resolver:(RCTProm
     resolve(nil);
     return;
   }
+  double previousPosition = self.basePosition + (self.playing ? MAX(0, CACurrentMediaTime() - self.basePositionTime) : 0);
+  BOOL wasPlaying = self.playing;
   self.lyricState = state;
-  self.playing = [state[@"isPlaying"] boolValue];
+  BOOL nextPlaying = [state[@"isPlaying"] boolValue];
   id positionValue = state[@"position"];
-  self.basePosition = [positionValue respondsToSelector:@selector(doubleValue)] ? [positionValue doubleValue] : 0;
-  self.basePositionTime = CACurrentMediaTime();
+  double nextPosition = [positionValue respondsToSelector:@selector(doubleValue)] ? [positionValue doubleValue] : 0;
+  // JS 在后台可能延迟上报，不能每秒都把原生时钟拉回旧位置。
+  // 小偏差继续使用本地连续时钟；只有拖动/暂停/切歌这类大跳变才重新对齐。
+  if (!(wasPlaying && nextPlaying && fabs(nextPosition - previousPosition) < 1.2)) {
+    self.basePosition = nextPosition;
+    self.basePositionTime = CACurrentMediaTime();
+  }
+  self.playing = nextPlaying;
   self.lastLineIndex = -1;
   if (self.configured) [self renderCurrentFrame];
   resolve(nil);

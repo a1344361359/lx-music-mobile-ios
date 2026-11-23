@@ -542,5 +542,6 @@
   "theme_kmusic": "KMusic 深色",
   "theme_kmusic_light": "KMusic 浅色",
   "setting_lyric_desktop_speed": "歌词快慢",
-  "setting_lyric_desktop_speed_tip": "负数让歌词提前，正数让歌词延后；调整后会自动记住。"
+  "setting_lyric_desktop_speed_tip": "负数让歌词提前，正数让歌词延后；调整后会自动记住。",
+  "theme_liquid_glass": "液态玻璃"
 }

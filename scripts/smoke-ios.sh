@@ -88,6 +88,7 @@ capture_ui() {
 xcrun simctl install "$device" "$app"
 capture_ui home build/ios-home.png
 capture_ui settings build/ios-settings.png
+capture_ui glass build/ios-glass.png
 capture_ui settings_detail build/ios-settings-detail.png
 capture_ui settings_lyric build/ios-settings-lyric.png
 capture_ui pip build/ios-pip.png

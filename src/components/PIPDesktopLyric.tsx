@@ -17,6 +17,8 @@ interface PipState {
   offset: number
   playedColor: string
   unplayedColor: string
+  glassColor: string
+  glassTransparency: number
 }
 
 // QQ 音乐式的系统画中画歌词：由原生 AVSampleBufferDisplayLayer 渲染，
@@ -32,6 +34,8 @@ export default () => {
   const lyricOffset = useSettingValue('desktopLyric.lyricOffset')
   const playedColor = useSettingValue('desktopLyric.style.lyricPlayedColor')
   const unplayedColor = useSettingValue('desktopLyric.style.lyricUnplayColor')
+  const glassColor = useSettingValue('theme.glassColor')
+  const glassTransparency = useSettingValue('theme.glassTransparency')
   const configuredRef = useRef(false)
 
   const buildState = (): PipState => ({
@@ -47,6 +51,8 @@ export default () => {
     offset: lyricOffset / 1000,
     playedColor,
     unplayedColor,
+    glassColor,
+    glassTransparency,
   })
 
   useEffect(() => {
@@ -69,7 +75,7 @@ export default () => {
       void LXPipLyric.update(state)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, lines, isPlay, progress.nowPlayTime, singleLine, width, fontSize, lyricOffset, playedColor, unplayedColor])
+  }, [enabled, lines, isPlay, progress.nowPlayTime, singleLine, width, fontSize, lyricOffset, playedColor, unplayedColor, glassColor, glassTransparency])
 
   useEffect(() => {
     if (Platform.OS !== 'ios' || !LXPipLyric) return

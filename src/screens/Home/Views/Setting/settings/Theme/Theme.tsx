@@ -31,7 +31,7 @@ const ThemeItem = ({ id, name, color, image, setTheme, showAll }: {
   const isActive = useActive(id)
 
   return (
-    showAll || isActive ? (
+    showAll || isActive || id === 'liquid_glass' ? (
       <TouchableOpacity style={{ ...styles.item, width: scaleSizeH(ITEM_HEIGHT) }} activeOpacity={0.5} onPress={() => { setTheme(id) }}>
         <View style={{ ...styles.colorContent, width: scaleSizeH(COLOR_ITEM_HEIGHT), borderColor: isActive ? color : 'transparent' }}>
           {

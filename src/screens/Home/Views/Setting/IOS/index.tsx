@@ -13,7 +13,7 @@ import Detail from './Detail'
 const DETAIL_SCALE = 1.05
 
 const GROUPS: Array<{ title: string, ids: SettingScreenIds[] }> = [
-  { title: '常用', ids: ['basic', 'player', 'lyric_desktop'] },
+  { title: '常用', ids: ['basic', 'theme', 'player', 'lyric_desktop'] },
   { title: '内容与数据', ids: ['search', 'list', 'sync', 'backup', 'platform_auth'] },
   { title: '其他', ids: ['other', 'version', 'about'] },
 ]

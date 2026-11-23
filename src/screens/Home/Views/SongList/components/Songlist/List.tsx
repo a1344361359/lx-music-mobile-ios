@@ -2,6 +2,7 @@ import { useRef, useState, useMemo, forwardRef, useImperativeHandle } from 'reac
 import { FlatList, View, RefreshControl, Platform, useWindowDimensions, type FlatListProps } from 'react-native'
 
 import ListItem from './ListItem'
+import FadeSlideIn from '@/components/common/FadeSlideIn'
 // import { navigations } from '@/navigation'
 import { type ListInfoItem } from '@/store/songlist/state'
 import { useLayout } from '@/utils/hooks'
@@ -57,13 +58,15 @@ export default forwardRef<ListType, ListProps>(({ onRefresh, onLoadMore, onOpenD
   }
 
   const renderItem: FlatListType['renderItem'] = ({ item, index }) => (
-    <ListItem
-      item={item}
-      index={index}
-      width={rowInfo.width}
-      showSource={showSource}
-      onPress={onOpenDetail}
-    />
+    <FadeSlideIn index={index} distance={12}>
+      <ListItem
+        item={item}
+        index={index}
+        width={rowInfo.width}
+        showSource={showSource}
+        onPress={onOpenDetail}
+      />
+    </FadeSlideIn>
   )
   const getkey: FlatListType['keyExtractor'] = item => item.id
   // const getItemLayout: FlatListType['getItemLayout'] = (data, index) => {

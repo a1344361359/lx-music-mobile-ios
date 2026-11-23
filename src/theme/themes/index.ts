@@ -50,6 +50,41 @@ export type LocalTheme = typeof themes[number]
 type ColorsKey = keyof LX.Theme['config']['themeColors']
 type ExtInfoKey = keyof LX.Theme['config']['extInfo']
 const varColorRxp = /^var\((.+)\)$/
+
+const DARK_APPEARANCE = {
+  'c-app-background': 'rgba(8, 9, 14, 0.86)',
+  'c-main-background': 'rgba(12, 13, 20, 0.88)',
+  'c-content-background': 'rgba(17, 18, 25, 0.92)',
+  'c-border-background': 'rgba(255, 255, 255, 0.12)',
+  'c-font': 'rgb(245, 245, 247)',
+  'c-font-label': 'rgba(235, 235, 245, 0.62)',
+  'c-primary-font': 'rgb(232, 232, 238)',
+  'c-primary-font-active': 'rgb(255, 255, 255)',
+} as const
+
+const LIGHT_APPEARANCE = {
+  'c-app-background': 'rgba(248, 248, 250, 0.86)',
+  'c-main-background': 'rgba(255, 255, 255, 0.90)',
+  'c-content-background': 'rgba(255, 255, 255, 0.94)',
+  'c-border-background': 'rgba(0, 0, 0, 0.10)',
+  'c-font': 'rgb(28, 28, 30)',
+  'c-font-label': 'rgba(60, 60, 67, 0.62)',
+  'c-primary-font': 'rgb(22, 22, 26)',
+  'c-primary-font-active': 'rgb(0, 0, 0)',
+} as const
+
+const applyAppearanceMode = (active: LX.ActiveTheme, originalIsDark: boolean, targetIsDark: boolean): LX.ActiveTheme => {
+  if (originalIsDark === targetIsDark) return { ...active, isDark: targetIsDark }
+  const palette = targetIsDark ? DARK_APPEARANCE : LIGHT_APPEARANCE
+  const themed: LX.ActiveTheme = {
+    ...active,
+    ...palette,
+    isDark: targetIsDark,
+    'c-button-font': targetIsDark ? 'rgb(245, 245, 247)' : 'rgb(28, 28, 30)',
+    'c-button-font-selected': targetIsDark ? 'rgb(255, 255, 255)' : 'rgb(28, 28, 30)',
+  }
+  return themed
+}
 export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
   let bgImg: ImageSourcePropType | undefined
   if (theme.isCustom) {
@@ -73,10 +108,13 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
     theme.config.extInfo[k] = theme.config.themeColors[v.replace(varColorRxp, '$1') as ColorsKey]
   }
 
+  const appearanceMode = settingState.setting['theme.appearanceMode']
+  const targetIsDark = appearanceMode === 'dark' ? true : appearanceMode === 'light' ? false : themeState.shouldUseDarkColors
+  const finishTheme = (value: LX.ActiveTheme) => applyAppearanceMode(value, theme.isDark, targetIsDark)
   const active = {
     id: theme.id,
     name: theme.name,
-    isDark: theme.isDark,
+    isDark: targetIsDark,
     ...theme.config.themeColors,
     ...theme.config.extInfo,
     'c-font': theme.config.themeColors['c-850'],
@@ -104,7 +142,7 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
     const contentAlpha = 0.92 - 0.72 * transparency
     const panelAlpha = 0.84 - 0.68 * transparency
     const appAlpha = 0.92 - 0.78 * transparency
-    return {
+    return finishTheme({
       ...active,
       'c-app-background': `rgba(5, 7, 14, ${appAlpha})`,
       'c-main-background': `rgba(8, 10, 19, ${panelAlpha})`,
@@ -114,12 +152,12 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
       'c-font-label': 'rgba(255, 255, 255, 0.62)',
       'c-primary-background': hexToRgba(settingState.setting['theme.glassColor'], 0.2),
       'c-primary-background-active': hexToRgba(settingState.setting['theme.glassColor'], 0.3),
-    } as const
+    } as const)
   }
   if (theme.id === 'kmusic' || theme.id === 'kmusic_light') {
     const isDark = theme.isDark
     const accent = settingState.setting['theme.kmusicAccentColor']
-    return {
+    return finishTheme({
       ...active,
       'c-app-background': isDark ? 'rgb(8, 8, 10)' : 'rgb(245, 245, 247)',
       'c-main-background': isDark ? 'rgb(12, 12, 16)' : 'rgb(242, 242, 245)',
@@ -129,9 +167,9 @@ export const buildActiveThemeColors = (theme: LX.Theme): LX.ActiveTheme => {
       'c-font-label': isDark ? 'rgb(142, 142, 147)' : 'rgb(110, 110, 115)',
       'c-primary-background': hexToRgba(accent, isDark ? 0.16 : 0.12),
       'c-primary-background-active': hexToRgba(accent, isDark ? 0.26 : 0.2),
-    } as const
+    } as const)
   }
-  return active
+  return finishTheme(active)
 }
 
 

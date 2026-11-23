@@ -5,6 +5,7 @@ import { setSpText } from '@/utils/pixelRatio'
 import { useAnimateColor } from '@/utils/hooks/useAnimateColor'
 import { DEFAULT_DURATION, useAnimateNumber } from '@/utils/hooks/useAnimateNumber'
 import { useUIScale } from './UIScaleContext'
+import { useSettingValue } from '@/store/setting/hook'
 // import { AppColors } from '@/theme'
 
 export interface TextProps extends _TextProps {
@@ -30,19 +31,20 @@ export interface TextProps extends _TextProps {
 //   }
 // }
 
-export default memo(({ style, size = 15, color, children, ...props }: TextProps) => {
+export default memo(({ style, size = 16, color, children, ...props }: TextProps) => {
   const theme = useTheme()
   const textShadow = useTextShadow()
   const uiScale = useUIScale()
+  const fontFamily = useSettingValue('common.fontFamily')
   style = StyleSheet.compose(textShadow ? {
-    // fontFamily: 'System',
+    fontFamily: fontFamily || undefined,
     textShadowColor: theme['c-primary-dark-300-alpha-800'],
     textShadowOffset: { width: 0.2, height: 0.2 },
     textShadowRadius: 2,
     fontSize: setSpText(size) * uiScale,
     color: color ?? theme['c-font'],
   } : {
-    // fontFamily: 'System',
+    fontFamily: fontFamily || undefined,
     fontSize: setSpText(size) * uiScale,
     color: color ?? theme['c-font'],
   }, style)
@@ -65,19 +67,20 @@ export interface AnimatedTextProps extends _AnimatedTextProps {
    */
   color?: ColorValue
 }
-export const AnimatedText = ({ style, size = 15, color, children, ...props }: AnimatedTextProps) => {
+export const AnimatedText = ({ style, size = 16, color, children, ...props }: AnimatedTextProps) => {
   const theme = useTheme()
   const textShadow = useTextShadow()
   const uiScale = useUIScale()
+  const fontFamily = useSettingValue('common.fontFamily')
   style = StyleSheet.compose(textShadow ? {
-    // fontFamily: 'System',
+    fontFamily: fontFamily || undefined,
     textShadowColor: theme['c-primary-dark-300-alpha-800'],
     textShadowOffset: { width: 0.2, height: 0.2 },
     textShadowRadius: 2,
     fontSize: setSpText(size) * uiScale,
     color: color ?? theme['c-font'],
   } : {
-    // fontFamily: 'System',
+    fontFamily: fontFamily || undefined,
     fontSize: setSpText(size) * uiScale,
     color: color ?? theme['c-font'],
   }, style as TextStyle)
@@ -101,15 +104,16 @@ export interface AnimatedColorTextProps extends _AnimatedTextProps {
    */
   opacity?: number
 }
-export const AnimatedColorText = ({ style, size = 15, opacity: _opacity, color: _color, children, ...props }: AnimatedColorTextProps) => {
+export const AnimatedColorText = ({ style, size = 16, opacity: _opacity, color: _color, children, ...props }: AnimatedColorTextProps) => {
   const theme = useTheme()
   const textShadow = useTextShadow()
+  const fontFamily = useSettingValue('common.fontFamily')
 
   const [color] = useAnimateColor(_color ?? theme['c-font'])
   const [opacity] = useAnimateNumber(_opacity ?? 1, DEFAULT_DURATION, false)
 
   style = StyleSheet.compose(textShadow ? {
-    // fontFamily: 'System',
+    fontFamily: fontFamily || undefined,
     textShadowColor: theme['c-primary-dark-300-alpha-800'],
     textShadowOffset: { width: 0.2, height: 0.2 },
     textShadowRadius: 2,
@@ -117,7 +121,7 @@ export const AnimatedColorText = ({ style, size = 15, opacity: _opacity, color: 
     color: color as unknown as ColorValue,
     opacity,
   } : {
-    // fontFamily: 'System',
+    fontFamily: fontFamily || undefined,
     fontSize: setSpText(size),
     color: color as unknown as ColorValue,
     opacity,

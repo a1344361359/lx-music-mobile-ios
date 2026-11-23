@@ -77,6 +77,11 @@ declare global {
       'common.alwaysKeepStatusbarHeight': boolean
 
       /**
+       * 全局字体家族；空字符串表示跟随系统
+       */
+      'common.fontFamily': string
+
+      /**
        * 主题id
        */
       'theme.id': string
@@ -88,6 +93,12 @@ declare global {
       'theme.glassColor': string
       'theme.glassTransparency': number
       'theme.glassWallpaper': string
+      'theme.glassWallpaperBlur': boolean
+
+      /**
+       * 所有主题的明暗外观：auto / light / dark
+       */
+      'theme.appearanceMode': 'auto' | 'light' | 'dark'
 
       /**
        * 亮色主题id

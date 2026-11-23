@@ -238,6 +238,19 @@ export const runSmokeTests = async() => {
     await RNFS.writeFile(reportPath, JSON.stringify({ status: 'passed', checks: [`liquid glass theme snapshot; nowplaying=${nowPlaying}`], screen: 'glass' }))
     return
   }
+  if (uiScreen === 'theme' || uiScreen === 'theme_light' || uiScreen === 'theme_dark') {
+    updateSetting({
+      'theme.id': 'kmusic',
+      'theme.appearanceMode': uiScreen === 'theme_light' ? 'light' : uiScreen === 'theme_dark' ? 'dark' : 'auto',
+    })
+    await getTheme().then(applyTheme)
+    setNavActiveId('nav_setting')
+    await pause(300)
+    global.app_event.iosSettingOpenDetail('theme')
+    await pause(1800)
+    await RNFS.writeFile(reportPath, JSON.stringify({ status: 'passed', checks: [`ui snapshot: ${uiScreen}`], screen: uiScreen }))
+    return
+  }
   if (uiScreen) {
     // Dedicated UI snapshots: keep the screen stable so the runner can capture it.
     if (uiScreen === 'settings_detail' || uiScreen === 'settings_lyric') {
@@ -267,6 +280,19 @@ export const runSmokeTests = async() => {
     const documentPicker = NativeModules.LXDocumentPicker
     assert(documentPicker && typeof documentPicker.openDocument === 'function', 'LXDocumentPicker native module is missing')
     checks.push('native document picker module registered')
+    const photoPicker = NativeModules.LXPhotoPicker
+    assert(photoPicker && typeof photoPicker.pickImage === 'function', 'LXPhotoPicker native module is missing')
+    checks.push('native iOS photo picker module registered')
+    const originalThemeId = settingState.setting['theme.id']
+    const originalAppearance = settingState.setting['theme.appearanceMode']
+    updateSetting({ 'theme.appearanceMode': 'light' })
+    assert(!(await getTheme()).isDark, 'Light appearance did not produce a light theme')
+    updateSetting({ 'theme.appearanceMode': 'dark' })
+    assert((await getTheme()).isDark, 'Dark appearance did not produce a dark theme')
+    updateSetting({ 'theme.appearanceMode': 'auto' })
+    checks.push('global light/dark appearance applies to themes')
+    updateSetting({ 'theme.id': originalThemeId, 'theme.appearanceMode': originalAppearance })
+    applyTheme(await getTheme())
     const pickerPromise = documentPicker.openDocument({ extTypes: ['js'], toPath: '' }).catch((err: any) => ({ error: String(err?.message ?? err) }))
     await pause(2500)
     const dismissResult = await documentPicker.dismissActivePicker()

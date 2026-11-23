@@ -2,6 +2,8 @@ import { memo } from 'react'
 
 // import Section from '../../components/Section'
 import Theme from './Theme'
+import AppearanceMode from './AppearanceMode'
+import Wallpaper from './Wallpaper'
 import IsAutoTheme from './IsAutoTheme'
 import IsHideBgDark from './IsHideBgDark'
 import IsDynamicBg from './IsDynamicBg'
@@ -14,6 +16,8 @@ export default memo(() => {
   return (
     <>
       <Theme />
+      <AppearanceMode />
+      <Wallpaper />
       <KMusicAppearance />
       <LiquidGlassAppearance />
       <IsAutoTheme />

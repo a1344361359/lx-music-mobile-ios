@@ -14,6 +14,7 @@ const defaultSetting: LX.AppSetting = {
   'common.showExitBtn': true,
   'common.useSystemFileSelector': true,
   'common.alwaysKeepStatusbarHeight': false,
+  'common.fontFamily': '',
 
   'player.startupAutoPlay': false,
   'player.startupPushPlayDetailScreen': false,
@@ -85,6 +86,8 @@ const defaultSetting: LX.AppSetting = {
   'theme.glassColor': '#B8AEC9',
   'theme.glassTransparency': 38,
   'theme.glassWallpaper': '',
+  'theme.glassWallpaperBlur': false,
+  'theme.appearanceMode': 'auto',
   'theme.lightId': 'kmusic',
   'theme.darkId': 'kmusic',
   'theme.hideBgDark': false,

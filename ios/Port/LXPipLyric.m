@@ -133,6 +133,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
   view.alpha = 1.0;
   view.userInteractionEnabled = NO;
   view.clipsToBounds = YES;
+  view.layer.masksToBounds = YES;
   view.backgroundColor = UIColor.clearColor;
   self.displayView = view;
   self.displayLayer = (AVSampleBufferDisplayLayer *)view.layer;
@@ -317,6 +318,13 @@ RCT_EXPORT_MODULE(LXPipLyric)
   CGFloat height = heightValue != nil ? MAX(40.0, MIN(200.0, heightValue.doubleValue)) : 58.0;
   if (heightValue == nil && !singleLine) height = 92.0;
   if (!singleLine) height = MAX(height, 72.0);
+  CGFloat cornerRadius = singleLine ? height / 2.0 : 24.0;
+  // 系统画中画取的是 displayLayer 的画面，图层本身也要裁圆角，
+  // 否则即便绘制内容有圆角，窗口四角仍会被玻璃底色填成直角。
+  self.displayLayer.cornerRadius = cornerRadius;
+  self.displayLayer.masksToBounds = YES;
+  self.displayView.layer.cornerRadius = cornerRadius;
+  self.displayView.layer.masksToBounds = YES;
   CGSize pointSize = CGSizeMake(width, height);
   if (self.displayView.superview != nil) {
     CGFloat superHeight = self.displayView.superview.bounds.size.height;
@@ -347,15 +355,17 @@ RCT_EXPORT_MODULE(LXPipLyric)
     [[UIColor clearColor] setFill];
     CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
 
-    // 整块矩形先铺满，保证系统画中画的四个角不会露出黑色背景。
+    // 整块玻璃按圆角路径铺满，四角保持透明，系统画中画窗口才不会露出直角底色。
+    UIBezierPath *glassPath = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, pointSize.width, pointSize.height) cornerRadius:cornerRadius];
     CGContextSetFillColorWithColor(ctx, [glassColor colorWithAlphaComponent:glassAlpha].CGColor);
-    CGContextFillRect(ctx, CGRectMake(0, 0, pointSize.width, pointSize.height));
+    CGContextAddPath(ctx, glassPath.CGPath);
+    CGContextFillPath(ctx);
     // 采样缓冲尚未上屏时，图层底色也用同一玻璃色兜底，避免启动/切换瞬间闪黑边。
     self.displayLayer.backgroundColor = [glassColor colorWithAlphaComponent:glassAlpha].CGColor;
-    self.displayView.backgroundColor = [glassColor colorWithAlphaComponent:glassAlpha];
+    self.displayView.backgroundColor = UIColor.clearColor;
     // 内部圆角描边保留液态玻璃的层次，但不再裁掉四角。
     CGRect innerRect = CGRectInset(CGRectMake(0, 0, pointSize.width, pointSize.height), 1, 1);
-    UIBezierPath *innerPath = [UIBezierPath bezierPathWithRoundedRect:innerRect cornerRadius:singleLine ? (height / 2.0 - 1.0) : 24.0];
+    UIBezierPath *innerPath = [UIBezierPath bezierPathWithRoundedRect:innerRect cornerRadius:MAX(2.0, cornerRadius - 1.0)];
     [[UIColor colorWithWhite:1.0 alpha:0.20] setStroke];
     innerPath.lineWidth = 0.7;
     [innerPath stroke];

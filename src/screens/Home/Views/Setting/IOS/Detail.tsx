@@ -11,6 +11,7 @@ import PlatformAuth from '../settings/PlatformAuth'
 import Other from '../settings/Other'
 import Version from '../settings/Version'
 import About from '../settings/About'
+import Theme from '../settings/Theme'
 import { type SettingScreenIds } from '../Main'
 
 export default memo(({ id }: { id: SettingScreenIds }) => {
@@ -25,6 +26,7 @@ export default memo(({ id }: { id: SettingScreenIds }) => {
     case 'other': return <Other />
     case 'version': return <Version />
     case 'about': return <About />
+    case 'theme': return <Theme />
     case 'basic':
     default: return <Basic />
   }

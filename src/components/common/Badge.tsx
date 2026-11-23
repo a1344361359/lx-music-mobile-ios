@@ -48,6 +48,6 @@ export default memo(({ type = 'normal', children }: {
     return colors
   }, [type, theme])
 
-  return <Text style={styles.text} size={9} color={colors.textColor}>{children}</Text>
+  return <Text style={styles.text} size={10} color={colors.textColor}>{children}</Text>
 })
 

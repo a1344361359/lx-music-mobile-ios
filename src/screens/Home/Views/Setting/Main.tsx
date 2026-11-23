@@ -11,9 +11,11 @@ import PlatformAuth from './settings/PlatformAuth'
 import Other from './settings/Other'
 import Version from './settings/Version'
 import About from './settings/About'
+import Theme from './settings/Theme'
 
 export const SETTING_SCREENS = [
   'basic',
+  'theme',
   'player',
   'lyric_desktop',
   'search',
@@ -60,6 +62,7 @@ const Main = forwardRef<MainType, {}>((props, ref) => {
       case 'other': return <Other />
       case 'version': return <Version />
       case 'about': return <About />
+      case 'theme': return <Theme />
       case 'basic':
       default: return <Basic />
     }

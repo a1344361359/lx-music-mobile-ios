@@ -14,7 +14,7 @@ export default async(setting: LX.AppSetting) => {
 
     onAppearanceChange(color => {
       setShouldUseDarkColors((color ?? 'light') == 'dark')
-      if (settingState.setting['common.isAutoTheme']) void getTheme().then(applyTheme)
+      if (settingState.setting['common.isAutoTheme'] || settingState.setting['theme.appearanceMode'] === 'auto') void getTheme().then(applyTheme)
     })
   }
 

@@ -243,7 +243,7 @@ RCT_EXPORT_MODULE(LXPipLyric)
   AVAudioSession *audioSession = AVAudioSession.sharedInstance;
   [audioSession setCategory:AVAudioSessionCategoryPlayback
                          mode:AVAudioSessionModeMoviePlayback
-                      options:AVAudioSessionCategoryOptionDuckOthers | AVAudioSessionCategoryOptionAllowBluetoothA2DP
+                      options:AVAudioSessionCategoryOptionAllowBluetoothA2DP
                         error:&audioError];
   if (audioError == nil) [audioSession setActive:YES error:&audioError];
   [self attachDisplayViewIfNeeded];
@@ -731,7 +731,7 @@ RCT_EXPORT_MODULE(LXBackgroundAudio)
   AVAudioSession *session = AVAudioSession.sharedInstance;
   [session setCategory:AVAudioSessionCategoryPlayback
                    mode:AVAudioSessionModeDefault
-                options:AVAudioSessionCategoryOptionDuckOthers | AVAudioSessionCategoryOptionAllowBluetoothA2DP
+                options:AVAudioSessionCategoryOptionAllowBluetoothA2DP
                   error:&error];
   if (error != nil) NSLog(@"[LXBackgroundAudio] setCategory error: %@", error.localizedDescription);
   error = nil;

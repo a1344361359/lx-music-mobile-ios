@@ -1,4 +1,5 @@
 #import <MediaPlayer/MediaPlayer.h>
+#import <AVFoundation/AVFoundation.h>
 #import <React/RCTBridgeModule.h>
 #import <UIKit/UIKit.h>
 
@@ -51,7 +52,21 @@ static NSMutableDictionary *LXNowPlayingInfo(void) {
   });
 }
 
+static void LXActivateNonMixablePlaybackSession(void) {
+  // iOS 的“正在播放”资格要求非混音音频会话。桌面歌词/画中画此前为了
+  // 压低其他 App 音量使用了 DuckOthers，这会让会话变成可混音，锁屏和
+  // 控制中心就可能完全不显示 KMusic。这里在写元数据前纠正回来。
+  NSError *error = nil;
+  AVAudioSession *session = AVAudioSession.sharedInstance;
+  [session setCategory:AVAudioSessionCategoryPlayback
+                   mode:AVAudioSessionModeDefault
+                options:AVAudioSessionCategoryOptionAllowBluetoothA2DP
+                  error:&error];
+  if (error == nil) [session setActive:YES error:&error];
+}
+
 RCT_EXPORT_METHOD(update:(NSDictionary *)info resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+  LXActivateNonMixablePlaybackSession();
   NSMutableDictionary *now = LXNowPlayingInfo();
   id value = info[@"title"];
   if ([value isKindOfClass:[NSString class]] && [value length] > 0) {
@@ -86,8 +101,12 @@ RCT_EXPORT_METHOD(update:(NSDictionary *)info resolver:(RCTPromiseResolveBlock)r
   // 明确告诉系统这是一首普通音频，并补齐默认播放速率/直播标记；
   // iOS 26 的锁屏播放器在没有这些字段时可能只显示空白卡片。
   now[MPNowPlayingInfoPropertyMediaType] = @(MPNowPlayingInfoMediaTypeAudio);
+  // 旧版 MediaPlayer 属性也一起写，兼容部分系统/车机读取路径。
+  now[MPMediaItemPropertyMediaType] = @(MPMediaTypeMusic);
   now[MPNowPlayingInfoPropertyDefaultPlaybackRate] = @1.0;
   now[MPNowPlayingInfoPropertyIsLiveStream] = @NO;
+  now[MPNowPlayingInfoPropertyPlaybackQueueCount] = @1;
+  now[MPNowPlayingInfoPropertyPlaybackQueueIndex] = @0;
   if (now[MPNowPlayingInfoPropertyPlaybackRate] == nil) {
     NSNumber *playing = info[@"isPlaying"];
     now[MPNowPlayingInfoPropertyPlaybackRate] = playing.boolValue ? @1.0 : @0.0;

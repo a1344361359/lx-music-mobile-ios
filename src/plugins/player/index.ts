@@ -37,7 +37,7 @@ const initial = async({ volume, playRate, cacheSize, isHandleAudioFocus, isEnabl
     audioOffload: isEnableAudioOffload,
     iosCategory: IOSCategory.Playback,
     iosCategoryMode: IOSCategoryMode.Default,
-    iosCategoryOptions: Platform.OS === 'ios' ? [IOSCategoryOptions.DuckOthers] : undefined,
+    iosCategoryOptions: Platform.OS === 'ios' ? [IOSCategoryOptions.AllowBluetoothA2DP] : undefined,
     autoUpdateMetadata: false,
   })
   global.lx.playerStatus.isInitialized = true

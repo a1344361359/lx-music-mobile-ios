@@ -28,5 +28,10 @@ export default async(setting: LX.AppSetting) => {
     if (state === 'active') void syncLiveActivity(true)
   })
 
-  if (setting['player.isShowLiveActivity']) setTimeout(() => { void syncLiveActivity(true) }, 1000)
+  if (setting['player.isShowLiveActivity']) {
+    setTimeout(() => { void syncLiveActivity(true) }, 1000)
+  } else {
+    // 清掉旧版本可能还挂着的实时活动，避免桌面顶部残留一条歌词。
+    endLiveActivity()
+  }
 }

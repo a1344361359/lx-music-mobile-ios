@@ -1,5 +1,5 @@
 const defaultSetting: LX.AppSetting = {
-  version: '2.1',
+  version: '2.2',
   'common.isAutoTheme': false,
   'common.langId': null,
   'common.apiSource': '',
@@ -34,7 +34,7 @@ const defaultSetting: LX.AppSetting = {
   'player.isS2t': false,
   'player.isShowBluetoothLyric': false,
   'player.isShowBluetoothFullLyric': false,
-  'player.isShowLiveActivity': true,
+  'player.isShowLiveActivity': false,
   'player.liveActivityLyricPlayedColor': '#31C27C',
   'player.liveActivityLyricUnplayedColor': '#FFFFFF',
 

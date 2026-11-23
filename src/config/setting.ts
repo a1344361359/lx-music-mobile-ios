@@ -5,6 +5,7 @@ import migrateSetting from './migrateSetting'
 import settingState from '@/store/setting/state'
 import { migrateMetaData, migrateListData } from './migrate'
 import { exitApp, tipDialog } from '@/utils/tools'
+import { compareVer } from '@/utils'
 
 // 业务相关工具方法
 
@@ -101,6 +102,12 @@ export const initSetting = async() => {
       }
       await removeData(storageDataPrefixOld.setting)
     }
+  }
+
+  // 1.9.4 起默认关闭顶部实时活动歌词，避免与画中画歌词重复。
+  // 旧版本默认是开启的，这里主动迁移一次，确保升级后顶部那条不再出现。
+  if (setting && compareVer(String(setting.version ?? ''), '2.2') < 0) {
+    setting['player.isShowLiveActivity'] = false
   }
 
   // console.log(setting)
